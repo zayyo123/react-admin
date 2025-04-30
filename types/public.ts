@@ -1,3 +1,22 @@
+// 这个文件定义了公共类型，主要作用包括：
+// 基础数据类型：
+// 定义了数组、空值等基础数据类型
+// 包括 ArrayData、EmptyData 等
+// 接口响应类型：
+// 定义了分页接口的响应类型（PageServerResult）
+// 定义了分页数据的类型（PaginationData）
+// 菜单类型：
+// 定义了侧边菜单的类型（SideMenu）
+// 包括菜单项、图标、权限等配置
+// 权限类型：
+// 定义了页面权限的类型（PagePermission）
+// 包括增删改查等操作权限
+// 表格相关类型：
+// 定义了表格列的类型（TableColumn）
+// 定义了表格配置的类型（BaseTableProps）
+// 定义了表格操作的类型（TableOptions）
+
+
 import type { ReactNode } from 'react';
 import type { TableProps } from 'antd';
 import type { ColumnType } from 'antd/es/table';
