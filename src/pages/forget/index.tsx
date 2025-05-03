@@ -1,7 +1,7 @@
 import type { FormProps } from 'antd';
 import { InputNumber, message } from 'antd';
 import { Form, Button, Input } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { setTitle } from '@/utils/helper';
 import { forgetPassword } from '@/servers/login';
 import Logo from '@/assets/images/logo.svg';
 
@@ -14,7 +14,7 @@ interface ForgetData {
 }
 
 function Forget() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { search } = useLocation();
   const navigate = useNavigate();
   const [form] = Form.useForm();
@@ -36,15 +36,21 @@ function Forget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [themeCache]);
 
-    useEffect(() => {
-      return () => {
-        if (timer) {
-          clearInterval(timer as NodeJS.Timeout);
-          setTimer(null);
-        }
-      };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+  useEffect(() => {
+    return () => {
+      if (timer) {
+        clearInterval(timer as NodeJS.Timeout);
+        setTimer(null);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 语言切换修改title
+  useEffect(() => {
+    setTitle(t, t('login.resetPassword'));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language]);
 
   /**
    * 修改密码
@@ -132,27 +138,27 @@ function Forget() {
           <Theme />
         </div>
         <div className={`
-          w-370px
-          p-30px
-          pb-10px
-          rounded-5px
           ${themeCache === 'dark' ? 'bg-black bg-dark-200' : 'bg-white'}
+          w-400px
+          p-2rem
+          rounded-10px
           box-border
           absolute
           left-1/2
           top-1/2
           -translate-x-1/2
           -translate-y-1/2
+          shadow-[2px_5px_20px_rgba(0,0,0,0.1)]
         `}>
          <div className="pb-30px flex items-center justify-center">
             <img
               className="mr-2 object-contain"
-              width="30"
-              height="30"
+              width="32"
+              height="32"
               src={Logo}
               alt="LOGO"
             />
-            <span className="text-xl font-bold tracking-2px">
+            <span className="text-22px font-bold tracking-2px">
               { t('login.resetPassword') }
             </span>
           </div>
@@ -171,7 +177,6 @@ function Forget() {
                 allow-clear="true"
                 placeholder={t('login.username')}
                 autoComplete="username"
-                addonBefore={<UserOutlined className='change' />}
               />
             </Form.Item>
 
@@ -185,7 +190,6 @@ function Forget() {
               <PasswordStrength
                 placeholder={t('login.password')}
                 autoComplete="current-password"
-                addonBefore={<LockOutlined className='change' />}
               />
             </Form.Item>
 
@@ -199,7 +203,6 @@ function Forget() {
               <PasswordStrength
                 placeholder={t('login.confirmPassword')}
                 autoComplete="current-password"
-                addonBefore={<LockOutlined className='change' />}
               />
             </Form.Item>
 
@@ -211,10 +214,10 @@ function Forget() {
               ]}
             >
               <InputNumber
-                className='w-full'
+                controls={false}
+                className='!w-full'
                 placeholder={t('login.phoneNumber')}
                 autoComplete="phone"
-                addonBefore={<UserOutlined className='change' />}
               />
             </Form.Item>
 
@@ -224,7 +227,8 @@ function Forget() {
                 rules={[{ required: true, message: t('public.pleaseEnter', { name: t('login.verificationCode') }) }]}
               >
                 <InputNumber
-                  className='!w-180px'
+                  controls={false}
+                  className='!w-210px'
                   placeholder={t('login.verificationCode')}
                 />
               </Form.Item>
@@ -246,7 +250,7 @@ function Forget() {
             <Button
               type="primary"
               htmlType="submit"
-              className="w-full !h-33px mt-5px rounded-5px tracking-2px"
+              className="w-full mt-5px rounded-5px tracking-2px"
               loading={isLoading}
             >
               { t('public.confirm') }
@@ -255,7 +259,7 @@ function Forget() {
 
           <Button
             htmlType="submit"
-            className="w-full !h-33px mt-10px mb-15px rounded-5px tracking-2px"
+            className="w-full mt-12px mb-10px rounded-5px tracking-2px"
             onClick={() => navigate(`/login${search}`)}
           >
             { t('public.back') }
