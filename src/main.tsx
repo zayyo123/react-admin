@@ -35,7 +35,7 @@ dayjs.locale("zh-cn");
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   /* 使用 StyleProvider 包装应用，提供样式支持 */
   <StyleProvider
-    /* 设置样式优先级为高 */
+    /* 设置样式自定义优先级为高 */
     hashPriority="high"
     /* 使用旧版逻辑属性转换器 */
     transformers={[legacyLogicalPropertiesTransformer]}
