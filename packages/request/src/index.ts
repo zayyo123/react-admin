@@ -1,3 +1,4 @@
+import type { RequestCancel } from './types';
 import { message } from '@south/message';
 import { getLocalInfo, removeLocalInfo } from '@south/utils';
 import axios from 'axios';
@@ -17,7 +18,7 @@ function creteRequest(url: string, tokenKey: string) {
       requestInterceptors(res) {
         const tokenLocal = getLocalInfo(tokenKey) || '';
         if (res?.headers && tokenLocal) {
-          res.headers.Authorization = tokenLocal as string;
+          res.headers.Authorization = `Bearer ${tokenLocal}` as string;
         }
         return res;
       },
@@ -70,7 +71,7 @@ function creteRequest(url: string, tokenKey: string) {
           return err;
         }
 
-        handleError('服务器错误！');
+        handleError((err as RequestCancel)?.response?.data?.message || '服务器错误！');
         return err;
       },
     },

@@ -11,6 +11,7 @@ export interface TabsData extends Omit<TabPaneProps, 'tab'> {
   labelZh: React.ReactNode;
   labelEn: React.ReactNode;
   nav: NavData[];
+  urlParams?: string; // url参数
 }
 
 interface TabsGoNext {
@@ -31,6 +32,8 @@ interface TabsState {
   setNav: (nav: NavData[]) => void;
   switchTabsLang: (label: string) => void;
   addTabs: (payload: TabsData) => void;
+  setTabs: (key: string, searchParams?: string) => void;
+  sortTabs: (payload: TabsData[]) => void;
   closeTabs: (payload: string, dropScope: AliveController['dropScope']) => void;
   closeTabGoNext: (payload: TabsGoNext) => void;
   closeLeft: (payload: string, dropScope: AliveController['dropScope']) => void;
@@ -71,6 +74,18 @@ export const useTabsStore = create<TabsState>()(
 
             return { tabs };
           }),
+        setTabs: (key, searchParams) =>
+          set((state) => {
+            const { tabs } = state;
+            const has = tabs.find((item) => item.key === key);
+            if (has) {
+              has.urlParams = searchParams;
+            }
+            return { tabs };
+          }),
+        sortTabs: (payload) => {
+          set({ tabs: payload });
+        },
         closeTabs: (payload, dropScope) =>
           set((state) => {
             const { tabs } = state;
@@ -205,7 +220,7 @@ export const useTabsStore = create<TabsState>()(
         },
       }),
       {
-        name: 'tabs-storage', // 存储中的项目名称，必须是唯一的
+        name: 'tabs_storage', // 存储中的项目名称，必须是唯一的
         storage: createJSONStorage(() => localStorage), // 使用sessionStorage作为存储
       },
     ),

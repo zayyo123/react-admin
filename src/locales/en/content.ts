@@ -13,4 +13,7 @@ export default {
   hideWatermark: 'Hide watermark',
   nestedData: 'Nested data',
   sensitiveInfo: 'Note: The title cannot contain sensitive information!',
+  creator: 'Creator',
+  updater: 'Updater',
+  author: 'Author',
 };

@@ -1,3 +1,4 @@
+import type { TabsData } from '@/stores/tabs';
 import { useTranslation } from 'react-i18next';
 import { getMenuByKey, getMenuName, getOpenMenuByRouter } from '@/menus/utils/helper';
 import { ADD_TITLE, EDIT_TITLE } from '@/utils/config';
@@ -26,9 +27,8 @@ export function useSingleTab(props: Props) {
   const { t, i18n } = useTranslation();
   const { pathname, search } = useLocation();
   const { setOpenKeys, setSelectedKeys } = useMenuStore((state) => state);
-  const { addTabs, setNav, setActiveKey } = useTabsStore((state) => state);
   const { isPhone, isCollapsed, menuList, permissions } = useCommonStore();
-  const uri = pathname + search;
+  const { activeKey, addTabs, setNav, setActiveKey } = useTabsStore((state) => state);
 
   // 处理默认展开
   useEffect(() => {
@@ -49,7 +49,7 @@ export function useSingleTab(props: Props) {
   const handleAddTab = useCallback(
     (path = pathname) => {
       // 当值为空时匹配路由
-      if (path === '/') return;
+      if (path === '/' || activeKey !== pathname) return;
       const title = i18n.language === 'zh' ? zhTitle : enTitle;
       const currentTitle = handleGetTitle();
       const menuByKeyProps = {
@@ -64,18 +64,19 @@ export function useSingleTab(props: Props) {
         labelEn: enTitle,
       });
 
-      const newTab = {
+      const newTab: TabsData = {
         label: currentTitle,
         labelEn: enTitle,
         labelZh: zhTitle,
-        key: uri,
+        key: pathname,
         nav: newNav,
+        urlParams: search,
       };
       setActiveKey(newTab.key);
       setNav(newTab.nav);
       addTabs(newTab);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pathname, search],
   );
 

@@ -1,8 +1,7 @@
 <div align="center">
-	<h1>React Admin</h1>
+	<h1>South Admin React</h1>
 </div>
 
-[![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 如果您觉得该项目对您有所帮助或者您喜欢我们的项目，请在 GitHub 上给我们一个 ⭐️。如果您有改进或新增功能的意愿欢迎提交 issues，感谢您的支持！
 
@@ -11,9 +10,9 @@
 使用`React`,`Typescript`,`Vite`,`Antd`等主流技术开发的开箱即用的中后台前端项目，`Vite`实现自动生成路由，支持`KeepAlive`功能，`zustand`状态管理，支持虚拟滚动表格，`UnoCss`开发样式。
 
 ## 🚀 项目演示
-[演示地址](https://southliu.github.io/)
+[演示地址](https://southliu.github.io/)，接口数据都为mock数据，无法进行新增和修改。
 
-![01.gif](https://github.com/southliu/github-static/blob/main/react-admin/01.gif)
+<img width="1920" height="922" alt="image" src="https://github.com/user-attachments/assets/943f1ca2-9ad3-45cc-83aa-7a3d18984653" />
 
 ![02.gif](https://github.com/southliu/github-static/blob/main/react-admin/02.gif)
 
@@ -25,13 +24,13 @@
 - 获取项目代码
 
 ```bash
-git clone https://github.com/southliu/react-admin.git
+git clone https://github.com/southliu/south-admin-react.git
 ```
 
 - 选择目录
 
 ```bash
-cd react-admin
+cd south-admin-react
 ```
 
 - 安装全局依赖依赖，存在则不用安装
@@ -61,10 +60,21 @@ pnpm dev
 pnpm build
 ```
 
+## 后端项目
+python: [south-admin-django](https://github.com/southliu/south-admin-django)
+
+## TODO
+- [x] 分页下拉框，触底加载下一页
+- [x] 列筛选添加拖拽功能
+- [x] 列筛选添加重置功能
+- [x] 外链菜单
+- [x] 优化代码，减少不必要的重渲染
+- [x] 开发python后端
+
 ## 📁 项目结构
 
 ```tree
-react-admin
+south-admin-react
 ├── build                     # 构建相关配置
 │   ├── utils                 # 构建工具函数
 │   └── vite                  # vite 配置

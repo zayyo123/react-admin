@@ -1,5 +1,7 @@
 import type { TFunction } from 'i18next';
-import { OPEN_CLOSE } from '@/utils/constants';
+import { MENU_STATUS } from '@/utils/constants';
+import { getUserPage } from '@/servers/system/user';
+import { getRoleList } from '@/servers/system/role';
 
 const otherSearch: BaseSearchList[] = [];
 
@@ -17,13 +19,27 @@ for (let i = 0; i < 32; i++) {
 // 搜索数据
 export const searchList = (t: TFunction): BaseSearchList[] => [
   {
-    label: t('system.age'),
-    name: 'age',
-    component: 'InputNumber',
+    label: t('login.username'),
+    name: 'username',
+    component: 'ApiPageSelect',
+    componentProps: {
+      api: getUserPage as ApiFn,
+      apiResultKey: 'items',
+      fieldNames: { label: 'username', value: 'username' },
+      params: {
+        page: 1,
+        pageSize: 10,
+      },
+    },
   },
   {
-    label: t('public.name'),
-    name: 'keyword',
+    label: t('system.email'),
+    name: 'email',
+    component: 'Input',
+  },
+  {
+    label: t('system.phone'),
+    name: 'phone',
     component: 'Input',
   },
   ...otherSearch,
@@ -38,53 +54,45 @@ export const tableColumns = (t: TFunction, optionRender: TableOptions<object>): 
     {
       title: 'ID',
       dataIndex: 'id',
-      width: 200,
+      width: 80,
       fixed: 'left',
     },
     {
       title: t('login.username'),
       dataIndex: 'username',
-      width: 200,
+      width: 100,
       fixed: 'left',
     },
     {
       title: t('public.name'),
-      dataIndex: 'real_name',
-      width: 200,
+      dataIndex: 'name',
+      width: 100,
     },
     {
-      title: 'URL',
-      dataIndex: 'url',
-      width: 400,
+      title: t('system.state'),
+      dataIndex: 'status',
+      width: 80,
+      enum: MENU_STATUS(t),
     },
     {
       title: t('system.role'),
-      dataIndex: 'roles_name',
+      dataIndex: 'rolesName',
       width: 200,
     },
     {
       title: t('system.phone'),
       dataIndex: 'phone',
+      width: 150,
+    },
+    {
+      title: t('system.email'),
+      dataIndex: 'email',
       width: 200,
     },
     {
-      title: t('system.state'),
-      dataIndex: 'status',
+      title: 'URL',
+      dataIndex: 'url',
       width: 200,
-      enum: [
-        { label: '启用', value: 1, color: 'green' },
-        { label: '禁用', value: 0, color: 'red' },
-      ],
-    },
-    {
-      title: t('system.module'),
-      dataIndex: 'module',
-      width: 200,
-      enum: {
-        user: '用户模块',
-        menu: '菜单模块',
-        role: '角色模块',
-      },
     },
     {
       title: t('public.operate'),
@@ -97,7 +105,7 @@ export const tableColumns = (t: TFunction, optionRender: TableOptions<object>): 
 };
 
 // 新增数据
-export const createList = (t: TFunction): BaseFormList[] => [
+export const createList = (t: TFunction, isCreate: boolean): BaseFormList[] => [
   {
     label: t('login.username'),
     name: 'username',
@@ -105,16 +113,28 @@ export const createList = (t: TFunction): BaseFormList[] => [
     component: 'Input',
   },
   {
+    label: t('login.password'),
+    name: 'password',
+    hidden: !isCreate,
+    rules: isCreate ? FORM_REQUIRED : undefined,
+    component: 'InputPassword',
+  },
+  {
     label: t('public.name'),
-    name: 'real_name',
+    name: 'name',
     rules: FORM_REQUIRED,
     component: 'Input',
   },
   {
     label: t('system.role'),
-    name: 'roles_name',
+    name: 'roleIds',
     rules: FORM_REQUIRED,
-    component: 'Input',
+    component: 'ApiSelect',
+    componentProps: {
+      mode: 'multiple',
+      api: getRoleList,
+      fieldNames: { label: 'name', value: 'id' },
+    },
   },
   {
     label: t('system.state'),
@@ -122,7 +142,19 @@ export const createList = (t: TFunction): BaseFormList[] => [
     rules: FORM_REQUIRED,
     component: 'Select',
     componentProps: {
-      options: OPEN_CLOSE(t),
+      options: MENU_STATUS(t),
     },
+  },
+  {
+    label: t('system.phone'),
+    name: 'phone',
+    rules: [{ pattern: /^1[3456789]\d{9}$/, message: t('login.phoneNumberError') }],
+    component: 'Input',
+  },
+  {
+    label: t('system.email'),
+    name: 'email',
+    rules: [{ type: 'email' }],
+    component: 'Input',
   },
 ];

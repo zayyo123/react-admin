@@ -21,8 +21,8 @@ function Forget() {
   const [form] = Form.useForm();
   const [isLoading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
-  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
   const [verificationTime, setVerificationTime] = useState(0);
+  const timer = useRef<NodeJS.Timeout | null>(null);
   const setThemeValue = usePublicStore((state) => state.setThemeValue);
   const themeCache = (localStorage.getItem(THEME_KEY) || 'light') as ThemeType;
 
@@ -39,12 +39,11 @@ function Forget() {
 
   useEffect(() => {
     return () => {
-      if (timer) {
-        clearInterval(timer as NodeJS.Timeout);
-        setTimer(null);
+      if (timer.current) {
+        clearInterval(timer.current as NodeJS.Timeout);
+        timer.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 语言切换修改title
@@ -110,20 +109,18 @@ function Forget() {
     }
 
     setVerificationTime(60);
-    setTimer(
-      setInterval(() => {
-        setVerificationTime((prev) => {
-          if (prev <= 1) {
-            if (timer) {
-              clearInterval(timer as NodeJS.Timeout);
-              setTimer(null);
-            }
-            return 0;
+    timer.current = setInterval(() => {
+      setVerificationTime((prev) => {
+        if (prev <= 1) {
+          if (timer.current) {
+            clearInterval(timer.current as NodeJS.Timeout);
+            timer.current = null;
           }
-          return prev - 1;
-        });
-      }, 1000),
-    );
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
     // ...获取验证码逻辑
   };
 
@@ -132,11 +129,11 @@ function Forget() {
       {contextHolder}
       <div
         className={`
-        ${themeCache === 'dark' ? 'bg-black text-white' : 'bg-light-400'}
-        w-screen
-        h-screen
-        relative
-      `}
+          ${themeCache === 'dark' ? 'bg-black text-white' : 'bg-light-400'}
+          w-screen
+          h-screen
+          relative
+        `}
       >
         <div className="flex absolute top-5 right-5">
           <I18n />
@@ -144,18 +141,18 @@ function Forget() {
         </div>
         <div
           className={`
-          ${themeCache === 'dark' ? 'bg-black bg-dark-200' : 'bg-white'}
-          w-400px
-          p-2rem
-          rounded-10px
-          box-border
-          absolute
-          left-1/2
-          top-1/2
-          -translate-x-1/2
-          -translate-y-1/2
-          shadow-[2px_5px_20px_rgba(0,0,0,0.1)]
-        `}
+            ${themeCache === 'dark' ? 'bg-black bg-dark-200' : 'bg-white'}
+            w-400px
+            p-2rem
+            rounded-10px
+            box-border
+            absolute
+            left-1/2
+            top-1/2
+            -translate-x-1/2
+            -translate-y-1/2
+            shadow-[2px_5px_20px_rgba(0,0,0,0.1)]
+          `}
         >
           <div className="pb-30px flex items-center justify-center">
             <img className="mr-2 object-contain" width="32" height="32" src={Logo} alt="LOGO" />

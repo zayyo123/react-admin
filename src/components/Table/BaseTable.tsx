@@ -1,7 +1,7 @@
 import type { ResizeCallbackData } from 'react-resizable';
 import type { ColumnsType } from 'antd/es/table';
-import type { TableColumn } from '#/public';
-import { type TableProps, Table, Button, message, Tooltip } from 'antd';
+import type { EnumShowType, TableColumn } from '#/public';
+import { type TableProps, Table, Button, message, Tag } from 'antd';
 import { useMemo, useState, useEffect, useRef, type ReactNode } from 'react';
 import { useFiler } from './hooks/useFiler';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { getTableHeight, handleRowHeight, filterTableColumns } from './utils/hel
 import ResizableTitle from './components/ResizableTitle';
 import useVirtualTable from './hooks/useVirtual';
 import TableFilter from './components/TableFilter';
+import EllipsisText from './components/EllipsisText';
 import './index.less';
 
 type Components = TableProps<object>['components'];
@@ -56,6 +57,8 @@ function BaseTable(props: Props) {
   const [columns, setColumns] = useState(filterTableColumns(props.columns as TableColumn[]));
   const tableRef = useRef<HTMLDivElement>(null);
   const [tableFilters, setTableFilters] = useState<string[]>([]);
+  const [sortList, setSortList] = useState<string[]>([]);
+  const rows = tableRef.current?.querySelectorAll('.ant-table-row');
 
   // 清除自定义属性
   const params: Partial<Props> = { ...props };
@@ -67,7 +70,11 @@ function BaseTable(props: Props) {
   delete (params as TableColumn).enum;
 
   useEffect(() => {
-    setColumns(filterTableColumns(props.columns as TableColumn[]));
+    const newColumns = filterTableColumns(props.columns as TableColumn[]);
+    const columnKeys = newColumns?.map((col) => col.dataIndex).filter(Boolean) as string[];
+    setColumns(newColumns);
+    setTableFilters(columnKeys);
+    setSortList(columnKeys);
   }, [props.columns]);
 
   // 添加新增缺少方法警告
@@ -93,8 +100,9 @@ function BaseTable(props: Props) {
    * 获取勾选表格数据
    * @param checks - 勾选
    */
-  const getTableChecks = (checks: string[]) => {
+  const getTableChecks = (checks: string[], newSortList: string[]) => {
     setTableFilters(checks);
+    setSortList(newSortList);
   };
 
   /**
@@ -114,7 +122,7 @@ function BaseTable(props: Props) {
 
   // 合并列表
   const mergeColumns = () => {
-    const newColumns = handleFilterTable(columns, tableFilters);
+    const newColumns = handleFilterTable(columns, tableFilters, sortList);
     if (!newColumns) return [];
     const result = newColumns.map((col, index) => ({
       ...col,
@@ -139,7 +147,9 @@ function BaseTable(props: Props) {
       render: (value: unknown, record: object, index: number) => {
         const renderContent = col?.render?.(value, record, index);
         let showValue: ReactNode | string = renderContent as ReactNode;
+        let showType: EnumShowType = 'text';
         let color: string | undefined = undefined;
+        let isStringArr = false; // 是否是字符串数组
         const enumList = (col as TableColumn)?.enum;
 
         if (enumList && typeof enumList === 'object') {
@@ -149,6 +159,7 @@ function BaseTable(props: Props) {
               if (String(item.value) === String(showValue)) {
                 showValue = item.label;
                 color = item.color;
+                showType = item?.type || 'text';
                 break;
               }
             }
@@ -162,13 +173,32 @@ function BaseTable(props: Props) {
           }
         }
 
-        if (!['object', 'function'].includes(typeof renderContent)) {
+        // 如果是字符串数组则用逗号分隔
+        if (Array.isArray(showValue)) {
+          isStringArr = showValue?.every((item) => typeof item === 'string');
+          if (isStringArr) showValue = showValue?.join(', ') || EMPTY_VALUE;
+        }
+
+        if (!['object', 'function'].includes(typeof renderContent) || isStringArr) {
+          const textContent = String(showValue ?? EMPTY_VALUE);
+
+          // 如果显示类型为标签
+          if (showType === 'tag') {
+            return <Tag color={color}>{textContent}</Tag>;
+          }
+
+          // 超出不省略则换行
+          if (col.ellipsis !== undefined && !col.ellipsis) {
+            return <div style={{ maxWidth: col.width }}>{textContent}</div>;
+          }
+
           return (
-            <Tooltip title={showValue} placement="topLeft">
-              <span style={{ color }} className="break-all" title={showValue as string}>
-                {String(showValue ?? EMPTY_VALUE)}
-              </span>
-            </Tooltip>
+            <EllipsisText
+              width={col.width}
+              text={textContent}
+              color={color}
+              className="break-all inline-block"
+            />
           );
         }
 
@@ -182,7 +212,8 @@ function BaseTable(props: Props) {
   // 虚拟滚动操作值
   const virtualOptions = useVirtualTable({
     height: tableHeight, // 设置可视高度
-    size: size || 'small',
+    rowHeight: rows?.[0]?.clientHeight || handleRowHeight(size),
+    total: props.dataSource?.length || 0,
   });
 
   // 虚拟滚动组件
@@ -224,9 +255,8 @@ function BaseTable(props: Props) {
   ) => {
     const className =
       typeof rowClassName === 'string' ? rowClassName : rowClassName?.(record, index, indent);
-    const rowSize = `!h-${handleRowHeight(size)}px`;
 
-    return `${className || ''} ${rowSize}`;
+    return `${className || ''}`;
   };
 
   return (
@@ -265,7 +295,11 @@ function BaseTable(props: Props) {
               {t('public.refresh')}
             </Button>
 
-            <TableFilter columns={columns} getTableChecks={getTableChecks} />
+            <TableFilter
+              columns={columns}
+              cacheColumns={props.columns}
+              getTableChecks={getTableChecks}
+            />
           </div>
         </div>
       )}

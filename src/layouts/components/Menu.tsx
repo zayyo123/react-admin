@@ -1,7 +1,9 @@
 import type { MenuProps } from 'antd';
 import type { SideMenu } from '#/public';
+import type { ItemType, MenuItemType } from 'antd/es/menu/interface';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Menu } from 'antd';
+import { isUrl } from '@/utils/is';
 import { Icon } from '@iconify/react';
 import { useTranslation } from 'react-i18next';
 import { useCommonStore } from '@/hooks/useCommonStore';
@@ -22,8 +24,6 @@ function LayoutMenu() {
   const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const [menus, setMenus] = useState<SideMenu[]>([]);
-  // 获取当前语言
-  const currentLanguage = i18n.language;
 
   const { isMaximize, isCollapsed, isPhone, openKeys, selectedKeys, permissions, menuList } =
     useCommonStore();
@@ -32,13 +32,6 @@ function LayoutMenu() {
   const [currentSelectedKeys, setCurrentSelectedKeys] = useState(
     selectedKeys ? [selectedKeys] : [],
   );
-
-  // 处理默认展开
-  useEffect(() => {
-    const newOpenKey = getOpenMenuByRouter(pathname);
-    setCurrentOpenKeys(newOpenKey);
-    setCurrentSelectedKeys([pathname]);
-  }, [pathname]);
 
   /**
    * 转换菜单icon格式
@@ -56,14 +49,20 @@ function LayoutMenu() {
     }
   }, []);
 
-  // 过滤没权限菜单
+  // 处理默认展开和过滤没权限菜单
   useEffect(() => {
+    // 处理默认展开
+    const newOpenKey = getOpenMenuByRouter(pathname);
+    setCurrentOpenKeys(newOpenKey);
+    setCurrentSelectedKeys([pathname]);
+
+    // 过滤没权限菜单
     if (permissions.length > 0) {
       const newMenus = filterMenus(menuList, permissions);
       filterMenuIcon(newMenus);
       setMenus(newMenus || []);
     }
-  }, [filterMenuIcon, permissions, currentLanguage, menuList]);
+  }, [pathname, permissions, menuList, filterMenuIcon, i18n.language]);
 
   /**
    * 处理跳转
@@ -80,10 +79,15 @@ function LayoutMenu() {
   const onClickMenu: MenuProps['onClick'] = (e) => {
     // 如果点击的菜单是当前菜单则退出
     if (e.key === pathname) return;
-
-    setCurrentSelectedKeys([e.key]);
     if (isPhone) hiddenMenu();
 
+    // 如果是外链则跳转
+    if (isUrl(e.key)) {
+      window.open(e.key, '_blank');
+      return;
+    }
+
+    setCurrentSelectedKeys([e.key]);
     goPath(e.key);
   };
 
@@ -149,38 +153,38 @@ function LayoutMenu() {
       <>
         <div
           className={`
-          transition-all
-          overflow-auto
-          z-2
-          ${styles.menu}
-          ${isCollapsed ? styles['menu-close'] : ''}
-          ${isMaximize || (isPhone && isCollapsed) ? styles['menu-none'] : ''}
-          ${isPhone ? '!z-1002' : ''}
+            transition-all
+            overflow-auto
+            z-2
+            ${styles.menu}
+            ${isCollapsed ? styles['menu-close'] : ''}
+            ${isMaximize || (isPhone && isCollapsed) ? styles['menu-none'] : ''}
+            ${isPhone ? '!z-1002' : ''}
         `}
         >
           <div
             className={`
-            text-white
-            flex
-            content-center
-            px-5
-            py-2
-            cursor-pointer
-            ${isCollapsed ? 'justify-center' : ''}
-          `}
+              text-white
+              flex
+              content-center
+              px-5
+              py-2
+              cursor-pointer
+              ${isCollapsed ? 'justify-center' : ''}
+            `}
             onClick={onClickLogo}
           >
             <img src={Logo} width={30} height={30} className="object-contain" alt="logo" />
 
             <span
               className={`
-            text-white
-            ml-3
-            text-xl
-            font-bold
-            truncate
-            ${isCollapsed ? 'hidden' : ''}
-          `}
+                text-white
+                ml-3
+                text-xl
+                font-bold
+                truncate
+                ${isCollapsed ? 'hidden' : ''}
+              `}
             >
               {t('public.currentName')}
             </span>
@@ -195,7 +199,7 @@ function LayoutMenu() {
             theme="dark"
             forceSubMenuRender
             inlineCollapsed={isPhone ? false : isCollapsed}
-            items={handleFilterMenus(menus)}
+            items={handleFilterMenus(menus) as ItemType<MenuItemType>[]}
             onClick={onClickMenu}
             onOpenChange={onOpenChange}
           />
@@ -204,20 +208,20 @@ function LayoutMenu() {
         {isPhone && !isCollapsed && (
           <div
             className={`
-            ${styles.cover}
-            fixed
-            w-full
-            h-full
-            bg-gray-500
-            bg-opacity-10
-            z-1001
-          `}
+              ${styles.cover}
+              fixed
+              w-full
+              h-full
+              bg-gray-500
+              bg-opacity-10
+              z-1001
+            `}
             onClick={hiddenMenu}
           />
         )}
       </>
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentOpenKeys, currentSelectedKeys, isCollapsed, isMaximize, isPhone, menus],
   );
 }

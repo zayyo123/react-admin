@@ -1,7 +1,7 @@
 import { request } from '@/utils/request';
 
 enum API {
-  URL = '/authority/user',
+  URL = '/system/user',
 }
 
 /**
@@ -25,7 +25,7 @@ export function getUserById(id: string) {
  * @param data - 请求数据
  */
 export function createUser(data: BaseFormData) {
-  return request.post(API.URL, data);
+  return request.post(`${API.URL}/create`, data);
 }
 
 /**
@@ -34,7 +34,7 @@ export function createUser(data: BaseFormData) {
  * @param data - 请求数据
  */
 export function updateUser(id: string, data: BaseFormData) {
-  return request.put(`${API.URL}/${id}`, data);
+  return request.put(`${API.URL}/update/${id}`, data);
 }
 
 /**

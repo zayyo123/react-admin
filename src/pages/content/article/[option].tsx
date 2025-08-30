@@ -1,7 +1,7 @@
-import { type FormInstance, message, Spin } from 'antd';
+import { Form, type FormInstance, message, Spin } from 'antd';
 import { createList } from './model';
 import { getUrlParam } from '@/utils/helper';
-import { useAliveController } from 'react-activation';
+import { useActivate, useAliveController } from 'react-activation';
 import { getArticleById, createArticle, updateArticle } from '@/servers/content/article';
 
 interface RecordType {
@@ -30,9 +30,10 @@ const fatherPath = '/content/article';
 function Page() {
   const { t } = useTranslation();
   const { pathname, search } = useLocation();
-  const uri = pathname + search;
   const id = getUrlParam(search, 'id');
+  const currentId = useRef(id);
   const createFormRef = useRef<FormInstance>(null);
+  const [form] = Form.useForm();
   const [isLoading, setLoading] = useState(false);
   const [createId, setCreateId] = useState('');
   const [createData, setCreateData] = useState<BaseFormData>(initCreate);
@@ -64,6 +65,21 @@ function Page() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useActivate(() => {
+    const { href } = window.location;
+    const newId = href.split('?')[1]?.split('=')[1];
+
+    // 获取url参数
+    if (currentId.current !== newId) {
+      if (newId) {
+        handleUpdate(newId);
+      } else {
+        handleCreate();
+      }
+      currentId.current = newId || '';
+    }
+  });
 
   // 异步添加富文本组件
   useLayoutEffect(() => {
@@ -105,7 +121,7 @@ function Page() {
     createFormRef.current?.resetFields();
     if (isRefresh) setRefreshPage(true);
     closeTabGoNext({
-      key: uri,
+      key: pathname,
       nextPath: fatherPath,
       dropScope,
     });
@@ -137,6 +153,7 @@ function Page() {
           <div className="mb-50px">
             <Spin spinning={isLoading}>
               <BaseForm
+                form={form}
                 ref={createFormRef}
                 list={createList(t)}
                 data={createData}

@@ -5,6 +5,7 @@ import { getArticlePage, deleteArticle } from '@/servers/content/article';
 // 当前行数据
 interface RowData {
   id: string;
+  title: string;
 }
 
 function Page() {
@@ -83,7 +84,7 @@ function Page() {
 
   /** 点击新增 */
   const onCreate = () => {
-    navigate('/content/article/option?type=create');
+    navigate('/content/article/create');
   };
 
   /**
@@ -91,7 +92,7 @@ function Page() {
    * @param id - 唯一值
    */
   const onUpdate = (id: string) => {
-    navigate(`/content/article/option?type=update&id=${id}`);
+    navigate(`/content/article/update?id=${id}`);
   };
 
   /**
@@ -128,14 +129,17 @@ function Page() {
    * @param record - 当前行参数
    */
   const optionRender: TableOptions<object> = (_, record) => (
-    <>
+    <div className="flex flex-wrap gap-5px">
       {pagePermission.update === true && (
-        <UpdateBtn className="mr-5px" onClick={() => onUpdate((record as RowData).id)} />
+        <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
       )}
       {pagePermission.delete === true && (
-        <DeleteBtn className="mr-5px" handleDelete={() => onDelete((record as RowData).id)} />
+        <DeleteBtn
+          name={(record as RowData).title}
+          handleDelete={() => onDelete((record as RowData).id)}
+        />
       )}
-    </>
+    </div>
   );
 
   return (
