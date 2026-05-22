@@ -12,6 +12,7 @@ import { filterDayjs } from '../Dates/utils/helper';
 interface Props extends FormProps {
   list: BaseFormList[];
   data: BaseFormData;
+  form: FormInstance<object>;
   style?: CSSProperties;
   className?: string;
   children?: ReactNode;
@@ -21,18 +22,9 @@ interface Props extends FormProps {
 }
 
 const BaseForm = forwardRef((props: Props, ref: Ref<FormInstance>) => {
-  const {
-    list,
-    data,
-    style,
-    className,
-    children,
-    labelCol,
-    wrapperCol,
-    handleFinish
-  } = props;
+  const { list, data, form, style, className, children, labelCol, wrapperCol, handleFinish } =
+    props;
   const { t } = useTranslation();
-  const [form] = Form.useForm();
 
   // 清除多余参数
   const formProps: Partial<Props> = { ...props };
@@ -57,16 +49,11 @@ const BaseForm = forwardRef((props: Props, ref: Ref<FormInstance>) => {
     },
   };
 
-  /** 回车处理 */
-  const onPressEnter = () => {
-    form?.submit();
-  };
-
   /**
    * 提交表单
    * @param values - 表单值
    */
-  const onFinish: FormProps['onFinish'] = values => {
+  const onFinish: FormProps['onFinish'] = (values) => {
     if (handleFinish) {
       // 将dayjs类型转为字符串
       let params = filterDayjs(values, list);
@@ -80,7 +67,7 @@ const BaseForm = forwardRef((props: Props, ref: Ref<FormInstance>) => {
    * 表单提交失败处理
    * @param errorInfo - 错误信息
    */
-  const onFinishFailed: FormProps['onFinishFailed'] = errorInfo => {
+  const onFinishFailed: FormProps['onFinishFailed'] = (errorInfo) => {
     console.warn('表单错误:', errorInfo);
   };
 
@@ -89,11 +76,8 @@ const BaseForm = forwardRef((props: Props, ref: Ref<FormInstance>) => {
    * @param item - 表单项
    */
   const renderFormItem = (item: BaseFormList) => (
-    <Form.Item
-      {...filterFormItem(item)}
-      valuePropName={handleValuePropName(item.component)}
-    >
-      { getComponent(t, item, onPressEnter) }
+    <Form.Item {...filterFormItem(item)} valuePropName={handleValuePropName(item.component)}>
+      {getComponent(t, item)}
     </Form.Item>
   );
 
@@ -111,28 +95,20 @@ const BaseForm = forwardRef((props: Props, ref: Ref<FormInstance>) => {
         onFinishFailed={onFinishFailed}
         autoComplete="off"
       >
-        {
-          list?.map(item => (
-            <div key={`${item.name}`}>
-              {
-                !item?.unit &&
-                <>{ renderFormItem(item) }</>
-              }
+        {list?.map((item) => (
+          <div key={`${item.name}`}>
+            {!item?.unit && <>{renderFormItem(item)}</>}
 
-              {
-                item.unit &&
-                <Form.Item label={item.label}>
-                  { renderFormItem({ ...item, noStyle: true }) }
-                  <span className='ml-5px whitespace-nowrap'>
-                    { item.unit }
-                  </span>
-                </Form.Item>
-              }
-            </div>
-          ))
-        }
+            {item.unit && (
+              <Form.Item label={item.label}>
+                {renderFormItem({ ...item, noStyle: true })}
+                <span className="ml-5px whitespace-nowrap">{item.unit}</span>
+              </Form.Item>
+            )}
+          </div>
+        ))}
 
-        { children }
+        {children}
       </Form>
     </div>
   );

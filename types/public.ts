@@ -23,15 +23,15 @@ import type { ColumnType } from 'antd/es/table';
 import type { ItemType } from 'antd/es/menu/interface';
 
 // 数组
-export type ArrayData = string[] | number[] | boolean[]
+export type ArrayData = string[] | number[] | boolean[];
 
 // 空值
-export type EmptyData = null | undefined
+export type EmptyData = null | undefined;
 
 // 分页接口响应数据
 export interface PageServerResult<T = unknown> {
-  items: T,
-  total: number
+  items: T;
+  total: number;
 }
 
 // 分页表格响应数据
@@ -61,11 +61,14 @@ export interface PagePermission {
   [key: string]: boolean | undefined;
 }
 
+export type EnumShowType = 'text' | 'tag';
+
 // 表格列表枚举
 export interface ColumnsEnum {
   label: string;
   value: unknown;
   color?: string;
+  type?: EnumShowType;
 }
 
 // 表格列数据

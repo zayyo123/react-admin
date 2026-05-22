@@ -1,34 +1,28 @@
 import type { InitTableState } from '../utils/reducer';
 import type { CSSProperties, ReactNode } from 'react';
-import type { SizeType } from 'antd/es/config-provider/SizeContext';
-import {
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-  useMemo
-} from 'react';
+import { useEffect, useReducer, useRef, useMemo } from 'react';
 import { reducer } from '../utils/reducer';
 import { isNumber } from '@/utils/is';
 import { ScrollContext } from '../utils/state';
-import { handleRowHeight } from '../utils/helper';
 import { throttle } from 'lodash';
 import VirtualWrapper from '../components/VirtualWrapper';
 
 const initialState: InitTableState = {
-  rowHeight: 38, // 行高度
+  rowHeight: 46, // 行高度
   curScrollTop: 0, // 当前的滚动高度
   scrollHeight: 0, // 可滚动区域的高度
-  tableScrollY: 0 // 可滚动区域值
+  tableScrollY: 0, // 可滚动区域值
+  total: 0, // 数据的总条数
 };
 
-type Children = ReactNode & Array<{
-  props: {
-    data: {
-      length: number
-    }
-  }
-}>
+type Children = ReactNode &
+  Array<{
+    props: {
+      data: {
+        length: number;
+      };
+    };
+  }>;
 
 interface VirtualTableProps {
   style?: CSSProperties;
@@ -49,21 +43,14 @@ function VirtualTable(props: VirtualTableProps) {
 
   const wrapTableRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-
-  // 数据的总条数
-  const [totalLen, setTotalLen] = useState<number>(children?.[2]?.props?.data?.length ?? 0);
-
-  useEffect(() => {
-    if (isNumber(children?.[1]?.props?.data?.length)) {
-      setTotalLen(children?.[1]?.props?.data?.length);
-    }
-  }, [children]);
+  const totalLen = initialState.total;
 
   // table总高度
   const tableHeight = useMemo<string | number>(() => {
+    // 数据的总条数
     let temp: string | number = 'auto';
     if (state.rowHeight && totalLen) {
-      temp = state.rowHeight * totalLen;
+      temp = state.rowHeight * (totalLen + 1);
     }
     return temp;
   }, [state.rowHeight, totalLen]);
@@ -134,7 +121,7 @@ function VirtualTable(props: VirtualTableProps) {
         type: 'changeScroll',
         curScrollTop: scrollTop,
         scrollHeight,
-        tableScrollY
+        tableScrollY,
       });
     }
   }, 60);
@@ -143,30 +130,24 @@ function VirtualTable(props: VirtualTableProps) {
     const ref = wrapTableRef?.current?.parentNode as HTMLElement;
 
     if (ref) {
-      ref.addEventListener('scroll', e => throttleScroll(e));
+      ref.addEventListener('scroll', (e) => throttleScroll(e));
     }
 
     return () => {
-      ref.removeEventListener('scroll', e => throttleScroll(e));
+      ref.removeEventListener('scroll', (e) => throttleScroll(e));
     };
-  }, [
-    wrapTableRef,
-    state.curScrollTop,
-    tableScrollY,
-    state.scrollHeight,
-    throttleScroll
-  ]);
+  }, [wrapTableRef, state.curScrollTop, tableScrollY, state.scrollHeight, throttleScroll]);
 
   return (
     <div
-      className='virtualTable'
+      className="virtualTable"
       ref={wrapTableRef}
       style={{
         width: '100%',
         position: 'relative',
         height: tableHeight,
         boxSizing: 'border-box',
-        paddingTop: state.curScrollTop
+        paddingTop: state.curScrollTop,
       }}
     >
       <ScrollContext.Provider
@@ -176,7 +157,7 @@ function VirtualTable(props: VirtualTableProps) {
           start,
           offsetStart,
           renderLen,
-          totalLen
+          totalLen,
         }}
       >
         <table
@@ -185,10 +166,10 @@ function VirtualTable(props: VirtualTableProps) {
           style={{
             ...restStyle,
             width,
-            position: 'relative'
+            position: 'relative',
           }}
         >
-          { children }
+          {children}
         </table>
       </ScrollContext.Provider>
     </div>
@@ -197,18 +178,20 @@ function VirtualTable(props: VirtualTableProps) {
 
 interface Props {
   height: number | string;
-  size: SizeType
+  rowHeight: number;
+  total: number;
 }
 
 export default function useVirtualTable(props: Props) {
-  const { height, size } = props;
+  const { height, rowHeight, total } = props;
   scrollY = height;
-  initialState.rowHeight = handleRowHeight(size);
+  initialState.rowHeight = rowHeight;
+  initialState.total = total;
 
   return {
     table: VirtualTable,
     body: {
-      wrapper: VirtualWrapper
-    }
+      wrapper: VirtualWrapper,
+    },
   };
 }

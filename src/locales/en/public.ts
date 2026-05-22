@@ -16,6 +16,8 @@ export default {
   pleaseEnter: 'Enter {{name}}',
   pleaseSelect: 'Select {{name}}',
   confirmMessage: 'Are you sure you want to {{name}}?',
+  deleteConfirmMessage: 'Are you sure you want to delete {{name}}?',
+  batchDeleteConfirmMessage: 'Are you sure you want to batch delete {{name}}?',
   successfulOperation: 'Successful operation',
   successfullyDeleted: 'Successfully deleted',
   checkAll: 'Check all',
@@ -57,10 +59,18 @@ export default {
   notSearchContent: 'There is no search content',
   switch: 'Switch',
   content: 'Content',
-  title: 'title',
+  title: 'Title',
+  type: 'Type',
+  refreshPage: 'Refresh page',
   returnHome: 'Return home',
-  notPermissionMessage: 'The current page cannot be accessed, it may not have permission or has been deleted!',
-  notFindMessage: 'The current page cannot be accessed, it may not have permission or has been deleted',
+  pageErrorTitle: 'Page error',
+  reloadPageMsg: 'New content found, automatically updating...',
+  pagepageErrorSubTitle:
+    'Sorry, an error has occurred on this page and the content cannot be displayed properly.',
+  notPermissionMessage:
+    'The current page cannot be accessed, it may not have permission or has been deleted!',
+  notFindMessage:
+    'The current page cannot be accessed, it may not have permission or has been deleted',
   requiredForm: '{{label}} is required!',
   validateEmail: '{{label}} is not a valid email!',
   validateNumber: '{{label}} is not a valid number!',
@@ -69,4 +79,5 @@ export default {
   getPageWarning: 'Missing page acquisition method',
   tableSelectWarning: 'Please select table data',
   menuSearchPlaceholder: 'Please enter the menu name',
+  noMoreData: 'No more data',
 };

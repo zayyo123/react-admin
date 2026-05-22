@@ -1,4 +1,13 @@
 import type { TabsProps } from 'antd';
+import {
+  type DragEndEvent,
+  closestCenter,
+  DndContext,
+  PointerSensor,
+  useSensor,
+} from '@dnd-kit/core';
+import { arrayMove, horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
+import DraggableTabNode, { type DraggableTabPaneProps } from './DraggableTabNode';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getMenuByKey } from '@/menus/utils/helper';
 import { message, Tabs, Dropdown } from 'antd';
@@ -18,70 +27,70 @@ import TabOptions from './TabOptions';
 function LayoutTabs() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { pathname, search } = useLocation();
-  const uri = pathname + search;
+  const { pathname } = useLocation();
   const { refresh, dropScope } = useAliveController();
+  const sensor = useSensor(PointerSensor, { activationConstraint: { distance: 10 } });
   const [messageApi, contextHolder] = message.useMessage();
-  const [time, setTime] = useState<null | NodeJS.Timeout>(null);
   const [isChangeLang, setChangeLang] = useState(false); // 是否切换语言
   const [refreshTime, seRefreshTime] = useState<null | NodeJS.Timeout>(null);
-  const setRefresh = usePublicStore(state => state.setRefresh);
+  const timer = useRef<null | NodeJS.Timeout>(null);
+  const setRefresh = usePublicStore((state) => state.setRefresh);
   const {
     tabs,
     isCloseTabsLock,
     activeKey, // 选中的标签值
     setActiveKey,
     addTabs,
+    sortTabs,
     closeTabs,
     setNav,
     toggleCloseTabsLock,
     switchTabsLang,
-  } = useTabsStore(useShallow(state => state));
+  } = useTabsStore(useShallow((state) => state));
 
   // 获取当前语言
   const currentLanguage = i18n.language;
 
-  const {
-    permissions,
-    isMaximize,
-    menuList
-  } = useCommonStore();
+  const { permissions, isMaximize, menuList } = useCommonStore();
 
   /**
    * 添加标签
    * @param path - 路径
    */
-  const handleAddTab = useCallback((path = uri) => {
-    // 当值为空时匹配路由
-    if (permissions.length > 0) {
-      if (path === '/') return;
-      const menuByKeyProps = {
-        menus: menuList,
-        permissions,
-        key: path
-      };
-      const newItems = getMenuByKey(menuByKeyProps);
-      if (newItems?.key) {
-        setActiveKey(newItems.key);
-        setNav(newItems.nav);
-        addTabs(newItems);
-        // 初始化Tabs时，更新文案语言类型
-        setChangeLang(true);
-      } else {
-        setActiveKey(path);
+  const handleAddTab = useCallback(
+    (path = pathname) => {
+      // 当值为空时匹配路由
+      if (permissions.length > 0) {
+        if (path === '/') return;
+        const menuByKeyProps = {
+          menus: menuList,
+          permissions,
+          key: path,
+        };
+        const newItems = getMenuByKey(menuByKeyProps);
+        if (newItems?.key) {
+          setActiveKey(newItems.key);
+          setNav(newItems.nav);
+          addTabs(newItems);
+          // 初始化Tabs时，更新文案语言类型
+          setChangeLang(true);
+        } else {
+          setActiveKey(path);
+        }
       }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [permissions, menuList]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [permissions, menuList],
+  );
 
   useEffect(() => {
     handleAddTab();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissions, menuList]);
 
   useEffect(() => {
     switchTabsLang(currentLanguage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLanguage]);
 
   useEffect(() => {
@@ -89,16 +98,16 @@ function LayoutTabs() {
       switchTabsLang(currentLanguage);
       setChangeLang(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isChangeLang]);
 
   useEffect(() => {
     handleSetTitle();
 
     return () => {
-      if (time) {
-        clearTimeout(time);
-        setTime(null);
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
       }
 
       if (refreshTime) {
@@ -106,26 +115,45 @@ function LayoutTabs() {
         seRefreshTime(null);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** 根据路由匹配对应的urlParams */
+  const getUrlParamsByRouterKey = (key: string) => {
+    for (let i = 0; i < tabs?.length; i++) {
+      const item = tabs[i];
+
+      if (item.key === key) {
+        return item?.urlParams || '';
+      }
+    }
+
+    return '';
+  };
+
+  /** 跳转页面 */
+  const handleNavigateTo = (key: string) => {
+    const urlParams = getUrlParamsByRouterKey(key);
+    navigate(`${key}${urlParams}`);
+  };
 
   useEffect(() => {
     // 当选中贴标签不等于当前路由则跳转
-    if (activeKey !== uri) {
-      const key = isCloseTabsLock ? activeKey : uri;
+    if (activeKey !== pathname) {
+      const key = isCloseTabsLock ? activeKey : pathname;
       handleSetTitle();
 
       // 如果是关闭标签则直接跳转
       if (isCloseTabsLock) {
-        navigate(key);
         toggleCloseTabsLock(false);
         handleUpdateBreadcrumb(key);
+        handleNavigateTo(key);
       } else {
         handleAddTab(key);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeKey, uri]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey, pathname]);
 
   /**
    * 设置浏览器标签
@@ -133,11 +161,9 @@ function LayoutTabs() {
    * @param path - 路径
    */
   const handleSetTitle = useCallback(() => {
-    const path = `${pathname}${search || ''}`;
-    // 通过路由获取标签名
-    const title = getTabTitle(tabs, path);
+    const title = getTabTitle(tabs, pathname);
     if (title) setTitle(t, title);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   /**
@@ -145,7 +171,7 @@ function LayoutTabs() {
    * @param key - 唯一值
    */
   const onChange = (key: string) => {
-    navigate(key);
+    handleNavigateTo(key);
   };
 
   /**
@@ -157,11 +183,10 @@ function LayoutTabs() {
       const menuByKeyProps = {
         menus: menuList,
         permissions,
-        key
+        key,
       };
       const newItems = getMenuByKey(menuByKeyProps);
       if (newItems?.key) {
-        navigate(key);
         setNav(newItems.nav);
       }
     }
@@ -190,53 +215,44 @@ function LayoutTabs() {
    * 点击重新加载
    * @param key - 点击值
    */
-   const onClickRefresh = useCallback((key = activeKey) => {
-    // 如果key不是字符串格式则退出
-    if (typeof key !== 'string') return;
+  const onClickRefresh = useCallback(
+    (key = activeKey) => {
+      // 如果key不是字符串格式则退出
+      if (typeof key !== 'string') return;
 
-    // 定时器没有执行时运行
-    if (!time) {
-      setRefresh(true);
-      refresh(key);
+      // 定时器没有执行时运行
+      if (!timer.current) {
+        setRefresh(true);
+        refresh(key);
 
-      setTime(
-        setTimeout(() => {
+        timer.current = setTimeout(() => {
           messageApi.success({
             content: t('public.refreshSuccessfully'),
-            key: 'refresh'
+            key: 'refresh',
           });
           setRefresh(false);
-          setTime(null);
-        }, 100)
-      );
+          timer.current = null;
+        }, 100);
 
-      seRefreshTime(
-        setTimeout(() => {
-          seRefreshTime(null);
-        }, 1000)
-      );
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeKey, time]);
+        seRefreshTime(
+          setTimeout(() => {
+            seRefreshTime(null);
+          }, 1000),
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeKey, timer],
+  );
 
   // 渲染重新加载
   const RefreshRender = useMemo(() => {
-    return (
-      <TabRefresh
-        isRefresh={!!refreshTime}
-        onClick={onClickRefresh}
-      />
-    );
+    return <TabRefresh isRefresh={!!refreshTime} onClick={onClickRefresh} />;
   }, [refreshTime, onClickRefresh]);
 
   // 渲染标签操作
   const TabOptionsRender = useMemo(() => {
-    return (
-      <TabOptions
-        activeKey={activeKey}
-        handleRefresh={onClickRefresh}
-      />
-    );
+    return <TabOptions activeKey={activeKey} handleRefresh={onClickRefresh} />;
   }, [activeKey, onClickRefresh]);
 
   // 渲染最大化操作
@@ -248,46 +264,65 @@ function LayoutTabs() {
   const tabOptions = [
     { element: RefreshRender },
     { element: TabOptionsRender },
-    { element: TabMaximizeRender }
+    { element: TabMaximizeRender },
   ];
 
   // 下拉菜单
   const dropdownMenuParams = { activeKey, handleRefresh: onClickRefresh };
   const [items, onClick] = useDropdownMenu(dropdownMenuParams);
 
+  /** 处理拖拽结束 */
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (active.id !== over?.id) {
+      const oldIndex = tabs.findIndex((item) => item.key === active.id);
+      const newIndex = tabs.findIndex((item) => item.key === over?.id);
+      const newTabs = arrayMove(tabs, oldIndex, newIndex);
+      sortTabs(newTabs);
+    }
+  };
+
   /** 二次封装标签 */
   const renderTabBar: TabsProps['renderTabBar'] = (tabBarProps, DefaultTabBar) => (
-    <DefaultTabBar {...tabBarProps}>
-      { node => (
-        <Dropdown
-          key={node.key}
-          menu={{
-            items: items(node.key as string),
-            onClick: e => onClick(e.key, node.key as string)
-          }}
-          trigger={['contextMenu']}
-        >
-          <div className='mr-1px'>
-            { node }
-          </div>
-        </Dropdown>
-      ) }
-    </DefaultTabBar>
+    <DndContext sensors={[sensor]} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
+      <SortableContext items={tabs.map((i) => i.key)} strategy={horizontalListSortingStrategy}>
+        <DefaultTabBar {...tabBarProps}>
+          {(node) => (
+            <DraggableTabNode
+              {...(node as React.ReactElement<DraggableTabPaneProps>).props}
+              key={node.key}
+            >
+              <div>
+                <Dropdown
+                  menu={{
+                    items: items(node.key as string),
+                    onClick: (e) => onClick(e.key, node.key as string),
+                  }}
+                  trigger={['contextMenu']}
+                >
+                  {node}
+                </Dropdown>
+              </div>
+            </DraggableTabNode>
+          )}
+        </DefaultTabBar>
+      </SortableContext>
+    </DndContext>
   );
 
   return (
-    <div className={`
-      w-[calc(100%-5px)]
-      flex
-      items-center
-      justify-between
-      mx-2
-      transition-all
-      ${isMaximize ? styles['con-maximize'] : ''}
-    `}>
-      { contextHolder }
-      {
-        tabs.length > 0 ?
+    <div
+      className={`
+        w-[calc(100%-5px)]
+        flex
+        items-center
+        justify-between
+        mx-2
+        transition-all
+        ${isMaximize ? styles['con-maximize'] : ''}
+      `}
+    >
+      {contextHolder}
+      {tabs.length > 0 ? (
         <Tabs
           hideAdd
           className={`w-[calc(100%-110px)] h-30px py-0 ${styles['layout-tabs']}`}
@@ -298,30 +333,29 @@ function LayoutTabs() {
           onEdit={onEdit}
           renderTabBar={renderTabBar}
         />
-        : <span></span>
-      }
+      ) : (
+        <span></span>
+      )}
 
-      <div className='flex'>
-        {
-          tabOptions?.map((item, index) => (
-            <div
-              key={index}
-              className={`
-                left-divide-tab
-                change
-                divide-solid
-                w-36px
-                h-36px
-                hover:opacity-70
-                flex
-                place-content-center
-                items-center
-              `}
-            >
-              { item.element }
-            </div>
-          ))
-        }
+      <div className="flex">
+        {tabOptions?.map((item, index) => (
+          <div
+            key={index}
+            className={`
+              left-divide-tab
+              change
+              divide-solid
+              w-36px
+              h-36px
+              hover:opacity-70
+              flex
+              place-content-center
+              items-center
+            `}
+          >
+            {item.element}
+          </div>
+        ))}
       </div>
     </div>
   );

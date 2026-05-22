@@ -15,30 +15,32 @@ function CopyBtn(props: Props) {
   const [isCopied, error, copyText] = useClipboard();
   const [messageApi, contextHolder] = message.useMessage();
 
+  useEffect(() => {
+    if (isCopied && !error) {
+      messageApi.success({ content: t('public.copySuccessfully'), key: 'copy' });
+    }
+
+    if (error) {
+      messageApi.warning({ content: error || t('public.copyFailed'), key: 'copy' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCopied, error]);
+
   /** 点击处理 */
   const onClick = () => {
     try {
       copyText(value);
-      if (isCopied) {
-        messageApi.success({ content: t('public.copySuccessfully'), key: 'copy' });
-      } else {
-        messageApi.warning({ content: error || t('public.copyFailed'), key: 'copy' });
-      }
-    } catch(e) {
+    } catch (e) {
       console.error(e);
-      messageApi.warning({ content: error || t('public.copyFailed'), key: 'copy' });
+      messageApi.warning({ content: t('public.copyFailed'), key: 'copy' });
     }
   };
 
   return (
     <>
-      { contextHolder }
-      <Button
-        {...props}
-        icon={<Icon icon="ant-design:copy-outlined" />}
-        onClick={onClick}
-      >
-        { text }
+      {contextHolder}
+      <Button {...props} icon={<Icon icon="ant-design:copy-outlined" />} onClick={onClick}>
+        {text}
       </Button>
     </>
   );

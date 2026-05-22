@@ -3,7 +3,7 @@ import type { DataNode } from 'antd/es/tree';
 import { request } from '@/utils/request';
 
 enum API {
-  URL = '/authority/menu'
+  URL = '/system/menu',
 }
 
 /**
@@ -11,10 +11,7 @@ enum API {
  * @param data - 请求数据
  */
 export function getMenuPage(data: Partial<BaseFormData> & PaginationData) {
-  return request.get<PageServerResult<BaseFormData[]>>(
-    `${API.URL}/page`,
-    { params: data }
-  );
+  return request.get<PageServerResult<BaseFormData[]>>(`${API.URL}/page`, { params: data });
 }
 
 /**
@@ -30,7 +27,7 @@ export function getMenuById(id: string) {
  * @param data - 请求数据
  */
 export function createMenu(data: BaseFormData) {
-  return request.post(API.URL, data);
+  return request.post(`${API.URL}/create`, data);
 }
 
 /**
@@ -39,7 +36,7 @@ export function createMenu(data: BaseFormData) {
  * @param data - 请求数据
  */
 export function updateMenu(id: string, data: BaseFormData) {
-  return request.put(`${API.URL}/${id}`, data);
+  return request.put(`${API.URL}/update/${id}`, data);
 }
 
 /**
@@ -75,5 +72,18 @@ export function savePermission(data: object) {
  * @param data - 请求数据
  */
 export function getMenuList() {
-  return request.get<SideMenu[]>(`/menu/list`);
+  return request.get<SideMenu[]>(`${API.URL}/list`);
+}
+
+/**
+ * 更改菜单状态
+ * @param data - 请求数据
+ */
+export function changeMenuState(data: object) {
+  return request.put(`${API.URL}/changeState`, data);
+}
+
+/** 获取菜单权限列表 */
+export function getMenuPermissionList() {
+  return request.get(`${API.URL}/permissionList`);
 }

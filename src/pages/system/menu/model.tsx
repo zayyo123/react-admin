@@ -1,32 +1,31 @@
-import type { TFunction } from "i18next";
-import { MENU_ACTIONS, MENU_MODULE, MENU_STATUS } from '@/utils/constants';
-import { valueToLabel } from "@/utils/helper";
+import type { TFunction } from 'i18next';
+import { MENU_ACTIONS, MENU_STATUS, MENU_TYPES } from '@/utils/constants';
+import { getMenuList } from '@/servers/system/menu';
+import { Icon } from '@iconify/react';
+import IconInput from './components/IconInput';
+import StateSwitch from './components/StateSwitch';
 
 // 搜索数据
 export const searchList = (t: TFunction): BaseSearchList[] => [
   {
+    label: t('systems:menu.label'),
+    name: 'label',
+    component: 'Input',
+  },
+  {
+    label: t('systems:menu.labelEn'),
+    name: 'labelEn',
+    component: 'Input',
+  },
+  {
     label: t('system.state'),
-    name: 'status',
+    name: 'state',
     wrapperWidth: 100,
     component: 'Select',
     componentProps: {
-      options: MENU_STATUS(t)
-    }
+      options: MENU_STATUS(t),
+    },
   },
-  {
-    label: t('system.module'),
-    name: 'module',
-    wrapperWidth: 170,
-    component: 'Select',
-    componentProps: {
-      options: MENU_MODULE(t)
-    }
-  },
-  {
-    label: t('system.controller'),
-    name: 'controller',
-    component: 'Input'
-  }
 ];
 
 /**
@@ -38,90 +37,148 @@ export const tableColumns = (t: TFunction, optionRender: TableOptions<object>): 
     {
       title: 'ID',
       dataIndex: 'id',
-      width: 200
+      width: 100,
     },
     {
-      title: t('public.name'),
-      dataIndex: 'name',
-      width: 200
+      title: t('systems:menu.icon'),
+      dataIndex: 'icon',
+      width: 50,
+      render: (text: string) => (
+        <div className="text-center">
+          {text ? <Icon className="text-16px" icon={text} /> : EMPTY_VALUE}
+        </div>
+      ),
     },
     {
-      title: t('system.state'),
-      dataIndex: 'status',
+      title: t('systems:menu.label'),
+      dataIndex: 'label',
       width: 200,
-      render: (value: number) => (
-        <span>{ valueToLabel(value, MENU_STATUS(t)) }</span>
-      )
     },
     {
-      title: t('system.module'),
-      dataIndex: 'module',
-      width: 200
+      title: t('systems:menu.labelEn'),
+      dataIndex: 'labelEn',
+      width: 200,
     },
     {
-      title: t('system.controller'),
-      dataIndex: 'controller',
-      width: 200
+      title: t('public.type'),
+      dataIndex: 'type',
+      width: 60,
+      ellipsis: false,
+      enum: MENU_TYPES(t),
+    },
+    {
+      title: t('systems:menu.router'),
+      dataIndex: 'router',
+      width: 200,
+    },
+    {
+      title: t('system.status'),
+      dataIndex: 'state',
+      width: 80,
+      render: (text: number, record) => <StateSwitch value={text} record={record} />,
+    },
+    {
+      title: t('systems:menu.sort'),
+      dataIndex: 'order',
+      width: 50,
+    },
+    {
+      title: t('systems:menu.rule'),
+      dataIndex: 'rule',
+      width: 150,
     },
     {
       title: t('public.creationTime'),
-      dataIndex: 'created_at',
-      width: 200
+      dataIndex: 'createdAt',
+      width: 200,
     },
     {
       title: t('public.updateTime'),
-      dataIndex: 'updated_at',
-      width: 200
+      dataIndex: 'updatedAt',
+      width: 200,
     },
     {
       title: t('public.operate'),
       dataIndex: 'operate',
-      width: 200,
+      width: 210,
       fixed: 'right',
-      render: (value: unknown, record: object) => optionRender(value, record)
+      render: (value: unknown, record: object) => optionRender(value, record),
     },
   ];
 };
 
 // 新增数据
-export const createList = (t: TFunction, id: string): BaseFormList[] => [
+export const createList = (t: TFunction, id: string, type?: number): BaseFormList[] => [
   {
-    label: t('public.name'),
-    name: 'name',
+    label: t('systems:menu.parentMenu'),
+    name: 'parentId',
+    component: 'ApiTreeSelect',
+    componentProps: {
+      api: getMenuList,
+      fieldNames: { label: 'label', value: 'id' },
+    },
+  },
+  {
+    label: t('systems:menu.label'),
+    name: 'label',
     rules: FORM_REQUIRED,
-    component: 'Input'
+    component: 'Input',
+  },
+  {
+    label: t('systems:menu.labelEn'),
+    name: 'labelEn',
+    rules: FORM_REQUIRED,
+    component: 'Input',
+  },
+  {
+    label: t('public.type'),
+    name: 'type',
+    rules: FORM_REQUIRED,
+    component: 'Select',
+    componentProps: {
+      options: MENU_TYPES(t),
+    },
+  },
+  {
+    label: t('systems:menu.router'),
+    name: 'router',
+    rules: [{ required: type !== 3 }],
+    component: 'Input',
   },
   {
     label: t('system.state'),
-    name: 'status',
+    name: 'state',
     rules: FORM_REQUIRED,
     component: 'Select',
     componentProps: {
-      options: MENU_STATUS(t)
-    }
+      options: MENU_STATUS(t),
+    },
   },
   {
-    label: t('system.module'),
-    name: 'module',
+    label: t('systems:menu.sort'),
+    name: 'order',
     rules: FORM_REQUIRED,
-    component: 'Select',
-    componentProps: {
-      options: MENU_MODULE(t)
-    }
+    component: 'InputNumber',
   },
   {
-    label: t('system.controller'),
-    name: 'controller',
-    rules: FORM_REQUIRED,
-    component: 'Input'
+    label: t('systems:menu.rule'),
+    name: 'rule',
+    rules: [{ required: type === 3 }],
+    component: 'Input',
   },
   {
-    label: t('system.createMenu'),
+    label: t('systems:menu.icon'),
+    name: 'icon',
+    component: 'customize',
+    render: IconInput,
+  },
+  {
+    label: t('system.permissionButton'),
     name: 'actions',
-    hidden: !!id,
+    hidden: !!id && type !== 3,
     component: 'CheckboxGroup',
     componentProps: {
-      options: MENU_ACTIONS(t)
-    }
-  }
+      options: MENU_ACTIONS(t),
+    },
+  },
 ];

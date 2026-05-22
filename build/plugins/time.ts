@@ -19,6 +19,7 @@ export const timePlugin = (): PluginOption => {
     /* 构建结束时记录时间 */
     buildEnd: () => {
       // console.timeEnd('\n模块转义完成时间')
+      // console.timeEnd('\n模块转义完成时间')
     },
     /* 在服务器关闭时被调用，输出总耗时 */
     closeBundle: () => {

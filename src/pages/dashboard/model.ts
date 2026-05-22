@@ -1,7 +1,6 @@
-import type { ApiFn, BaseFormList } from "#/form";
-import type { TFunction } from "i18next";
-import { getGames } from '@/servers/platform/game';
-import { getPartnerDemo } from "@/servers/platform/partner";
+import type { ApiFn, BaseFormList } from '#/form';
+import type { TFunction } from 'i18next';
+import { getPartnerDemo } from '@/servers/platform/partner';
 
 // 搜索数据
 export const searchList = (t: TFunction): BaseFormList[] => [
@@ -11,7 +10,7 @@ export const searchList = (t: TFunction): BaseFormList[] => [
     component: 'RangePicker',
     componentProps: {
       allowClear: false,
-    }
+    },
   },
   {
     label: t('dashboard.gameID'),
@@ -23,41 +22,19 @@ export const searchList = (t: TFunction): BaseFormList[] => [
     label: t('dashboard.cooperativeCompany'),
     name: 'partners',
     wrapperWidth: 200,
-    component: 'PartnerSelect'
-  },
-  {
-    label: t('dashboard.gameID') + '2',
-    name: 'keyword2',
-    wrapperWidth: 200,
-    component: 'ApiSelect',
-    componentProps: {
-      api: getGames as ApiFn,
-      params: {
-        isAll: true
-      },
-      fieldNames: {
-        label: 'name',
-        value: 'id'
-      }
-    }
-  },
-  {
-    label: t('dashboard.cooperativeCompany') + '2',
-    name: 'partners2',
-    wrapperWidth: 200,
     component: 'ApiSelect',
     componentProps: {
       api: getPartnerDemo as ApiFn,
       params: [
         '/platform/partner',
         {
-          isAll: true
-        }
+          isAll: true,
+        },
       ],
       fieldNames: {
         label: 'name',
-        value: 'id'
-      }
-    }
+        value: 'id',
+      },
+    },
   },
 ];

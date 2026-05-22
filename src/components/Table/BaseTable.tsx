@@ -1,7 +1,7 @@
 import type { ResizeCallbackData } from 'react-resizable';
 import type { ColumnsType } from 'antd/es/table';
-import type { TableColumn } from '#/public';
-import { type TableProps, Table, Button, message, Tooltip } from 'antd';
+import type { EnumShowType, TableColumn } from '#/public';
+import { type TableProps, Table, Button, message, Tag } from 'antd';
 import { useMemo, useState, useEffect, useRef, type ReactNode } from 'react';
 import { useFiler } from './hooks/useFiler';
 import { useTranslation } from 'react-i18next';
@@ -12,9 +12,10 @@ import { getTableHeight, handleRowHeight, filterTableColumns } from './utils/hel
 import ResizableTitle from './components/ResizableTitle';
 import useVirtualTable from './hooks/useVirtual';
 import TableFilter from './components/TableFilter';
+import EllipsisText from './components/EllipsisText';
 import './index.less';
 
-type Components = TableProps<object>['components']
+type Components = TableProps<object>['components'];
 
 interface Props extends Omit<TableProps<object>, 'bordered'> {
   isLoading?: boolean; // 是否加载
@@ -48,7 +49,7 @@ function BaseTable(props: Props) {
     leftContent,
     rightContent,
     getPage,
-    onCreate
+    onCreate,
   } = props;
   const { t } = useTranslation();
   const { isPhone } = useCommonStore();
@@ -56,6 +57,8 @@ function BaseTable(props: Props) {
   const [columns, setColumns] = useState(filterTableColumns(props.columns as TableColumn[]));
   const tableRef = useRef<HTMLDivElement>(null);
   const [tableFilters, setTableFilters] = useState<string[]>([]);
+  const [sortList, setSortList] = useState<string[]>([]);
+  const rows = tableRef.current?.querySelectorAll('.ant-table-row');
 
   // 清除自定义属性
   const params: Partial<Props> = { ...props };
@@ -67,7 +70,11 @@ function BaseTable(props: Props) {
   delete (params as TableColumn).enum;
 
   useEffect(() => {
-    setColumns(filterTableColumns(props.columns as TableColumn[]));
+    const newColumns = filterTableColumns(props.columns as TableColumn[]);
+    const columnKeys = newColumns?.map((col) => col.dataIndex).filter(Boolean) as string[];
+    setColumns(newColumns);
+    setTableFilters(columnKeys);
+    setSortList(columnKeys);
   }, [props.columns]);
 
   // 添加新增缺少方法警告
@@ -75,7 +82,7 @@ function BaseTable(props: Props) {
     if (isCreate && !onCreate) {
       message.warning(t('public.createMethodWarning'));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCreate]);
 
   // 添加分页缺少方法警告
@@ -83,7 +90,7 @@ function BaseTable(props: Props) {
     if (isOperate && !getPage) {
       message.warning(t('public.getPageWarning'));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getPage]);
 
   // 表格高度
@@ -93,8 +100,9 @@ function BaseTable(props: Props) {
    * 获取勾选表格数据
    * @param checks - 勾选
    */
-  const getTableChecks = (checks: string[]) => {
+  const getTableChecks = (checks: string[], newSortList: string[]) => {
     setTableFilters(checks);
+    setSortList(newSortList);
   };
 
   /**
@@ -114,7 +122,7 @@ function BaseTable(props: Props) {
 
   // 合并列表
   const mergeColumns = () => {
-    const newColumns = handleFilterTable(columns, tableFilters);
+    const newColumns = handleFilterTable(columns, tableFilters, sortList);
     if (!newColumns) return [];
     const result = newColumns.map((col, index) => ({
       ...col,
@@ -133,13 +141,15 @@ function BaseTable(props: Props) {
             ...col?.onCell?.(data, index)?.style,
             maxWidth: col.width,
             width: col.width,
-          }
+          },
         };
       },
       render: (value: unknown, record: object, index: number) => {
         const renderContent = col?.render?.(value, record, index);
         let showValue: ReactNode | string = renderContent as ReactNode;
+        let showType: EnumShowType = 'text';
         let color: string | undefined = undefined;
+        let isStringArr = false; // 是否是字符串数组
         const enumList = (col as TableColumn)?.enum;
 
         if (enumList && typeof enumList === 'object') {
@@ -149,6 +159,7 @@ function BaseTable(props: Props) {
               if (String(item.value) === String(showValue)) {
                 showValue = item.label;
                 color = item.color;
+                showType = item?.type || 'text';
                 break;
               }
             }
@@ -162,17 +173,32 @@ function BaseTable(props: Props) {
           }
         }
 
-        if (!['object', 'function'].includes(typeof renderContent)) {
+        // 如果是字符串数组则用逗号分隔
+        if (Array.isArray(showValue)) {
+          isStringArr = showValue?.every((item) => typeof item === 'string');
+          if (isStringArr) showValue = showValue?.join(', ') || EMPTY_VALUE;
+        }
+
+        if (!['object', 'function'].includes(typeof renderContent) || isStringArr) {
+          const textContent = String(showValue ?? EMPTY_VALUE);
+
+          // 如果显示类型为标签
+          if (showType === 'tag') {
+            return <Tag color={color}>{textContent}</Tag>;
+          }
+
+          // 超出不省略则换行
+          if (col.ellipsis !== undefined && !col.ellipsis) {
+            return <div style={{ maxWidth: col.width }}>{textContent}</div>;
+          }
+
           return (
-            <Tooltip title={showValue} placement='topLeft'>
-              <span
-                style={{ color }}
-                className='break-all'
-                title={showValue as string}
-              >
-                { String(showValue ?? EMPTY_VALUE) }
-              </span>
-            </Tooltip>
+            <EllipsisText
+              width={col.width}
+              text={textContent}
+              color={color}
+              className="break-all inline-block"
+            />
           );
         }
 
@@ -186,7 +212,8 @@ function BaseTable(props: Props) {
   // 虚拟滚动操作值
   const virtualOptions = useVirtualTable({
     height: tableHeight, // 设置可视高度
-    size: size || 'small'
+    rowHeight: rows?.[0]?.clientHeight || handleRowHeight(size),
+    total: props.dataSource?.length || 0,
   });
 
   // 虚拟滚动组件
@@ -196,18 +223,20 @@ function BaseTable(props: Props) {
         cell: ResizableTitle,
       },
       body: {
-        wrapper: virtualOptions.body.wrapper
+        wrapper: virtualOptions.body.wrapper,
       },
-      table: virtualOptions.table
+      table: virtualOptions.table,
     } as Components;
   }, [virtualOptions]);
 
   // 只带拖拽功能组件
-  const components: Components = isVirtual ? virtualComponents : {
-    header: {
-      cell: ResizableTitle,
-    }
-  };
+  const components: Components = isVirtual
+    ? virtualComponents
+    : {
+        header: {
+          cell: ResizableTitle,
+        },
+      };
 
   // 滚动
   const scroll = {
@@ -222,13 +251,12 @@ function BaseTable(props: Props) {
   const handleRowClassName: TableProps<object>['rowClassName'] = (
     record: object,
     index: number,
-    indent: number
+    indent: number,
   ) => {
-    const className = typeof rowClassName === 'string' ?
-                      rowClassName : rowClassName?.(record, index, indent);
-    const rowSize = `!h-${handleRowHeight(size)}px`;
+    const className =
+      typeof rowClassName === 'string' ? rowClassName : rowClassName?.(record, index, indent);
 
-    return `${className || ''} ${rowSize}`;
+    return `${className || ''}`;
   };
 
   return (
@@ -240,51 +268,45 @@ function BaseTable(props: Props) {
         ${isZebra !== false ? 'zebra' : ''}
       `}
     >
-      {
-        isOperate &&
-        <div className='flex justify-between !mb-10px'>
-          <div className='flex flex-wrap items-center gap-6px'>
-            {
-              !!isCreate &&
+      {isOperate && (
+        <div className="flex justify-between !mb-10px">
+          <div className="flex flex-wrap items-center gap-6px">
+            {!!isCreate && (
               <Button
                 type="primary"
-                className='small-btn'
+                className="small-btn"
                 icon={<PlusOutlined />}
                 onClick={onCreate}
               >
-                { t('public.create') }
+                {t('public.create')}
               </Button>
-            }
-            { leftContent }
+            )}
+            {leftContent}
           </div>
 
-          <div className='flex flex-wrap items-center justify-end gap-6px'>
-            { rightContent ? <div>{ rightContent }</div> : undefined }
+          <div className="flex flex-wrap items-center justify-end gap-6px">
+            {rightContent ? <div>{rightContent}</div> : undefined}
 
             <Button
-              className='small-btn'
-              icon={
-                <RedoOutlined
-                  className="transform rotate-270"
-                  disabled={!!isLoading}
-                />
-              }
+              className="small-btn"
+              icon={<RedoOutlined className="transform rotate-270" disabled={!!isLoading} />}
               onClick={getPage}
             >
-              { t('public.refresh') }
+              {t('public.refresh')}
             </Button>
 
             <TableFilter
               columns={columns}
+              cacheColumns={props.columns}
               getTableChecks={getTableChecks}
             />
           </div>
         </div>
-      }
+      )}
       <div ref={tableRef}>
         <Table
-          size='small'
-          rowKey='id'
+          size="small"
+          rowKey="id"
           pagination={false}
           loading={isLoading}
           {...props}
@@ -294,7 +316,7 @@ function BaseTable(props: Props) {
             borderRight: '1px solid rgba(0, 0, 0, .05)',
             borderBottom: '1px solid rgba(0, 0, 0, .05)',
             overflow: 'auto',
-            ...props.style
+            ...props.style,
           }}
           bordered={isBordered !== false}
           scroll={scroll}

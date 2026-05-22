@@ -31,7 +31,9 @@ function ApiSelect(props: ApiSelectProps) {
         const apiFun = Array.isArray(params) ? api(...params) : api(params);
         const { code, data } = await apiFun;
         if (Number(code) !== 200) return;
-        const result = apiResultKey ? (data as { [apiResultKey: string]: unknown })?.[apiResultKey] : data;
+        const result = apiResultKey
+          ? (data as { [apiResultKey: string]: unknown })?.[apiResultKey]
+          : data;
         setOptions(result as DefaultOptionType[]);
       }
     } finally {
@@ -44,17 +46,17 @@ function ApiSelect(props: ApiSelectProps) {
     if (props.value && options.length === 0) {
       getApiData();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value]);
 
   /**
    * 展开下拉回调
    * @param open - 是否展开
    */
-  const onDropdownVisibleChange = (open: boolean) => {
+  const onOpenChange = (open: boolean) => {
     if (open) getApiData();
 
-    props.onDropdownVisibleChange?.(open);
+    props.onOpenChange?.(open);
   };
 
   return (
@@ -68,7 +70,7 @@ function ApiSelect(props: ApiSelectProps) {
       loading={isLoading}
       options={options}
       notFoundContent={isLoading && <Loading />}
-      onDropdownVisibleChange={onDropdownVisibleChange}
+      onOpenChange={onOpenChange}
     />
   );
 }

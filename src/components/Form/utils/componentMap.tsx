@@ -12,19 +12,20 @@ import {
   Rate,
   Slider,
   Upload,
-  type InputProps
+  type InputProps,
 } from 'antd';
 import {
   BaseDatePicker,
   BaseRangePicker,
   BaseTimePicker,
-  BaseTimeRangePicker
+  BaseTimeRangePicker,
 } from '@/components/Dates';
 import {
   BaseSelect,
   BaseTreeSelect,
   ApiSelect,
-  ApiTreeSelect
+  ApiTreeSelect,
+  ApiPageSelect,
 } from '@/components/Selects';
 import BaseTransfer from '@/components/Transfer/BaseTransfer';
 import PasswordStrength from '@/components/PasswordStrength';
@@ -53,6 +54,7 @@ componentMap.set('TimePicker', BaseTimePicker);
 componentMap.set('TimeRangePicker', BaseTimeRangePicker);
 componentMap.set('ApiSelect', ApiSelect);
 componentMap.set('ApiTreeSelect', ApiTreeSelect);
+componentMap.set('ApiPageSelect', ApiPageSelect);
 componentMap.set('PasswordStrength', PasswordStrength);
 
 // 业务组件注入
@@ -62,15 +64,12 @@ CreateBusiness();
  * 获取组件
  * @param item - 表单项
  */
-export function getComponent(t: TFunction, item: BaseFormList, onPressEnter: () => void) {
+export function getComponent(t: TFunction, item: BaseFormList) {
   const { component, componentProps } = item;
 
   // 输入框渲染
   const renderInput = (
-    <Input
-      {...(initCompProps(t, 'Input', onPressEnter) as InputProps)}
-      {...(componentProps as InputProps)}
-    />
+    <Input {...(initCompProps(t, 'Input') as InputProps)} {...(componentProps as InputProps)} />
   );
 
   // 当组件类型为自定义时
@@ -87,10 +86,7 @@ export function getComponent(t: TFunction, item: BaseFormList, onPressEnter: () 
 
   return (
     <>
-      <Comp
-        {...initCompProps(t, component, onPressEnter)}
-        {...componentProps}
-      />
+      <Comp {...initCompProps(t, component)} {...componentProps} />
     </>
   );
 }

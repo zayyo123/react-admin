@@ -6,9 +6,10 @@ export default {
   state: 'state',
   module: 'module',
   controller: 'Controller',
-  createMenu: 'Create menu',
+  permissionButton: 'Permission Button',
   age: 'age',
   role: 'role',
+  email: 'email',
   phone: 'phone',
   rightsProfile: 'Rights Profile',
   authority: 'authority system',
@@ -23,4 +24,6 @@ export default {
   detail: 'details',
   export: 'export',
   status: 'status',
+  description: 'description',
+  authorize: 'authorize',
 };

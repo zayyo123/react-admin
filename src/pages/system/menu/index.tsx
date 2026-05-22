@@ -1,27 +1,31 @@
 import type { BaseFormData } from '#/form';
 import type { PagePermission } from '#/public';
-import { type FormInstance, message } from 'antd';
+import { Button, Form, type FormInstance, message } from 'antd';
 import { searchList, createList, tableColumns } from './model';
 import {
   getMenuPage,
   getMenuById,
   createMenu,
   updateMenu,
-  deleteMenu
+  deleteMenu,
 } from '@/servers/system/menu';
 
 // 当前行数据
 interface RowData {
   id: string;
+  type: number;
+  label: string;
+  labelEn: string;
 }
 
 // 初始化新增数据
 const initCreate = {
-  status: 1
+  state: 1,
+  order: 0,
 };
 
 function Page() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const createFormRef = useRef<FormInstance>(null);
   const columns = tableColumns(t, optionRender);
   const [isFetch, setFetch] = useState(false);
@@ -37,6 +41,8 @@ function Page() {
   const [total, setTotal] = useState(0);
   const [tableData, setTableData] = useState<BaseFormData[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
+  const [form] = Form.useForm();
+  const type = Form.useWatch('type', form);
   const { permissions } = useCommonStore();
 
   // 权限前缀
@@ -47,7 +53,7 @@ function Page() {
     page: checkPermission(`${permissionPrefix}/index`, permissions),
     create: checkPermission(`${permissionPrefix}/create`, permissions),
     update: checkPermission(`${permissionPrefix}/update`, permissions),
-    delete: checkPermission(`${permissionPrefix}/delete`, permissions)
+    delete: checkPermission(`${permissionPrefix}/delete`, permissions),
   };
 
   /** 获取表格数据 */
@@ -77,7 +83,6 @@ function Page() {
    * @param values - 表单返回数据
    */
   const onSearch = (values: BaseFormData) => {
-    setPage(1);
     setSearchData(values);
     setFetch(true);
   };
@@ -85,17 +90,21 @@ function Page() {
   // 首次进入自动加载接口数据
   useEffect(() => {
     if (pagePermission.page) getPage();
-    // TODO: 重复请求测试，可删
-    if (pagePermission.page) getPage();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagePermission.page]);
 
-  /** 点击新增 */
-  const onCreate = () => {
+  /**
+   * 点击新增
+   * @param record - 当前行数据
+   */
+  const onCreate = (record?: RowData) => {
+    const id = record?.id;
+    let type = record?.id ? record?.type : undefined;
+    if (type && type < 3) type = type + 1;
     setCreateOpen(true);
     setCreateTitle(ADD_TITLE(t));
     setCreateId('');
-    setCreateData(initCreate);
+    setCreateData({ ...initCreate, parentId: id, type });
   };
 
   /**
@@ -133,12 +142,14 @@ function Page() {
   const handleCreate = async (values: BaseFormData) => {
     try {
       setCreateLoading(true);
-      const functions = () => createId ? updateMenu(createId, values) : createMenu(values);
+      const functions = () => (createId ? updateMenu(createId, values) : createMenu(values));
       const { code, message } = await functions();
       if (Number(code) !== 200) return;
       messageApi.success(message || t('public.successfulOperation'));
       setCreateOpen(false);
       getPage();
+    } catch (e) {
+      console.log(e);
     } finally {
       setCreateLoading(false);
     }
@@ -178,27 +189,29 @@ function Page() {
    * @param record - 当前行参数
    */
   function optionRender(_: unknown, record: object) {
-    return <>
-      {
-        pagePermission.update === true &&
-        <UpdateBtn
-          className='mr-5px'
-          onClick={() => onUpdate((record as RowData).id)}
-        />
-      }
-      {
-        pagePermission.delete === true &&
-        <DeleteBtn
-          className='mr-5px'
-          handleDelete={() => onDelete((record as RowData).id)}
-        />
-      }
-    </>;
+    return (
+      <div className="flex flex-wrap gap-5px">
+        {pagePermission.create === true && (record as RowData)?.type <= 2 && (
+          <Button className="small-btn" type="primary" onClick={() => onCreate(record as RowData)}>
+            {t('systems:menu.addChildMenu')}
+          </Button>
+        )}
+        {pagePermission.update === true && (
+          <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
+        )}
+        {pagePermission.delete === true && (
+          <DeleteBtn
+            name={i18n.language === 'zh' ? (record as RowData).label : (record as RowData).labelEn}
+            handleDelete={() => onDelete((record as RowData).id)}
+          />
+        )}
+      </div>
+    );
   }
 
   return (
     <BaseContent isPermission={pagePermission.page}>
-      { contextHolder }
+      {contextHolder}
       <BaseCard>
         <BaseSearch
           list={searchList(t)}
@@ -208,7 +221,7 @@ function Page() {
         />
       </BaseCard>
 
-      <BaseCard className='mt-10px'>
+      <BaseCard className="mt-10px">
         <BaseTable
           isLoading={isLoading}
           isCreate={pagePermission.create}
@@ -231,13 +244,15 @@ function Page() {
         width={600}
         title={createTitle}
         open={isCreateOpen}
+        style={{ top: 20 }}
         confirmLoading={isCreateLoading}
         onOk={createSubmit}
         onCancel={closeCreate}
       >
         <BaseForm
           ref={createFormRef}
-          list={createList(t, createId)}
+          form={form}
+          list={createList(t, createId, type)}
           data={createData}
           labelCol={{ span: 4 }}
           wrapperCol={{ span: 19 }}
