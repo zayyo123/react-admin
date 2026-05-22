@@ -158,10 +158,7 @@ declare global {
 // for type re-export
 declare global {
   // @ts-ignore
-  export type { ECOption } from '../src/hooks/useEcharts'
-  import('../src/hooks/useEcharts')
-  // @ts-ignore
-  export type { ApiPageSelectProps, CheckboxList, ThemeType, TabsData, FC, BusinessComponents, RangeValue, SearchModalProps, Langs, InitTableState, TableAction, EditorProps, FormData, FormList, SearchList, ApiSelectProps, ApiTreeSelectProps } from './autoImports.d'
+  export type { ECOption, ApiPageSelectProps, CheckboxList, ThemeType, TabsData, FC, BusinessComponents, RangeValue, SearchModalProps, Langs, InitTableState, TableAction, EditorProps, FormData, FormList, SearchList, ApiSelectProps, ApiTreeSelectProps } from './autoImports.d'
   import('./autoImports.d')
   // @ts-ignore
   export type { BaseFormData, ComponentType, ApiResult, ApiFn, ComponentProps, RenderComponentProps, FormRule, CustomizeRender, BaseFormList, BaseSearchList } from './form'

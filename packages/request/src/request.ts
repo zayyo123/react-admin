@@ -8,9 +8,18 @@ import type {
 import type { RequestInterceptors, CreateRequestConfig, ServerResult } from './types';
 
 interface NewAxiosRequestConfig extends AxiosRequestConfig {
+  // 每个请求生成的唯一标识，用来在响应阶段精确删除对应 AbortController。
   _mapKey?: string;
 }
 
+/**
+ * Axios 请求封装类。
+ *
+ * 这一层统一处理三件事：
+ * 1. 创建 axios 实例并挂载项目级拦截器；
+ * 2. 通过 AbortController 取消重复请求；
+ * 3. 对常规 HTTP 请求和 SSE 流式请求提供统一调用入口。
+ */
 class AxiosRequest {
   // axios 实例
   instance: AxiosInstance;
@@ -29,13 +38,14 @@ class AxiosRequest {
       (res: InternalAxiosRequestConfig) => {
         const controller = new AbortController();
 
+        // 把 AbortController 挂到本次请求上，后续 cancelRequest 可以主动终止请求。
         res.signal = controller.signal;
 
         const mapKey = this.generateMapKey(res);
         // 保存key到请求配置中，供响应拦截器使用
         (res as NewAxiosRequestConfig)._mapKey = mapKey;
 
-        // 如果存在则删除该请求
+        // 如果同一个 method + url + params + body 的请求已经存在，取消旧请求，保留新请求。
         if (this.abortControllerMap.get(mapKey)) {
           console.warn('取消重复请求：', mapKey);
           this.cancelRequest(mapKey);
@@ -59,7 +69,7 @@ class AxiosRequest {
     );
     // 全局响应拦截器保证最后执行
     this.instance.interceptors.response.use(
-      // 因为我们接口的数据都在res.data下，所以我们直接返回res.data
+      // 后端业务数据统一放在 res.data 中，页面调用接口时直接拿业务响应即可。
       (res: AxiosResponse) => {
         // 从请求配置中获取之前保存的key
         const mapKey = (res.config as NewAxiosRequestConfig)._mapKey || '';
@@ -71,6 +81,8 @@ class AxiosRequest {
   }
   /**
    * 取消全部请求
+   *
+   * 常用于退出登录、切换账号、离开大型页面时，防止旧请求继续回写状态。
    */
   cancelAllRequest() {
     for (const [, controller] of this.abortControllerMap) {
@@ -80,6 +92,10 @@ class AxiosRequest {
   }
   /**
    * 取消指定的请求
+   *
+   * 入参需要和 generateMapKey 生成的 key 一致。项目内部一般通过请求封装统一管理，
+   * 页面层如无必要不要手写 mapKey，避免误取消其他请求。
+   *
    * @param url - 待取消的请求URL
    */
   cancelRequest(url: string | string[]) {
@@ -124,6 +140,9 @@ class AxiosRequest {
 
   /**
    * 生成请求的唯一key（考虑参数）
+   *
+   * 这里把 method、url、query 参数、body 参数拼成一个字符串，用来识别“重复请求”。
+   * 注意：这是轻量实现，适合普通对象参数；如果 body 中有复杂嵌套对象，需要调用方保持参数顺序稳定。
    */
   private generateMapKey(requestConfig: NewAxiosRequestConfig) {
     let url = requestConfig.method || '';
@@ -150,6 +169,11 @@ class AxiosRequest {
 
   /**
    * SSE请求
+   *
+   * GET 请求优先使用浏览器原生 EventSource；
+   * 非 GET 请求使用 fetch + ReadableStream 手动解析 data 行。
+   * 返回值是关闭函数，页面卸载或关闭弹窗时要调用它，避免连接泄漏。
+   *
    * @param url - 链接
    * @param onMessage - 接收数据回调函数
    * @param onError - 错误回调函数
@@ -166,11 +190,11 @@ class AxiosRequest {
     onError?: (error: Event) => void;
     options?: AxiosRequestConfig;
   }): () => void {
-    // 检查是否需要使用 fetch 实现 SSE（例如 POST 请求）
+    // EventSource 只天然适合 GET；POST 等非 GET 场景走 fetch 流式读取。
     const method = options.method?.toUpperCase() || 'GET';
     const isGetRequest = method === 'GET';
 
-    // 获取 token
+    // 复用请求拦截器获取认证信息，保证 SSE 和普通接口使用同一套 token 逻辑。
     let tokenLocal = '';
     try {
       const config = this.interceptorsObj?.requestInterceptors?.({
@@ -187,8 +211,7 @@ class AxiosRequest {
       // 使用原生 EventSource 处理 GET 请求
       const fullUrl = this.instance.getUri({ url, ...options });
 
-      // EventSource 不直接支持自定义 headers，需要通过其他方式传递 token
-      // 可以通过 URL 参数或者后端支持的其他方式
+      // EventSource 不支持自定义 headers，这里把 token 放入 URL 参数，后端需要配合读取。
       const urlWithToken = tokenLocal
         ? `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}token=${tokenLocal}`
         : fullUrl;
@@ -220,7 +243,7 @@ class AxiosRequest {
         source.close();
       };
     }
-    // 使用 fetch 处理非 GET 请求（如 POST）
+    // 使用 fetch 处理非 GET 请求（如 POST），通过 reader 持续读取服务端推送的数据块。
     let isCanceled = false;
     const abortController = new AbortController();
 
@@ -274,7 +297,7 @@ class AxiosRequest {
 
           buffer += decoder.decode(value, { stream: true });
 
-          // 处理接收到的数据（按行分割）
+          // SSE 协议通常按行传输，data: 前缀后面是真正的业务数据。
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // 保留不完整的行
 

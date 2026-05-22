@@ -8,13 +8,13 @@ import { Input, Spin } from 'antd';
 import { type KeyboardEvent, lazy, Suspense } from 'react';
 import { cloneDeep } from 'lodash';
 
-// 存储已加载的组件
+// 存储运行时注入的组件，例如业务组件或 customize 自定义渲染组件。
 const loadedComponents = new Map<string, React.ComponentType<any>>();
 
-// 使用React.lazy创建懒加载组件
+// 使用 React.lazy 创建懒加载组件，避免通用表单一次性打包所有低频控件。
 const lazyComponents = new Map<string, React.LazyExoticComponent<any>>();
 
-// 注册懒加载组件
+// 注册通用控件类型。BaseFormList.component 的值需要和这里的 key 对齐。
 lazyComponents.set(
   'TextArea',
   lazy(() => import('antd').then((module) => ({ default: module.Input.TextArea }))),
@@ -110,7 +110,11 @@ lazyComponents.set(
   lazy(() => import('@/components/WangEditor')),
 );
 
-// 创建一个包装组件，确保在Suspense加载期间也能保持表单数据
+/**
+ * 懒加载控件包装层。
+ * 表单控件异步加载期间，Antd Form 的字段值可能已经存在；这里主动从 form 中读取当前值，
+ * 并把 onChange 收口到 setFieldValue，保证懒加载完成后字段值不会丢失。
+ */
 function LazyComponentWrapper({
   componentType,
   t,
@@ -132,12 +136,12 @@ function LazyComponentWrapper({
     return <Spin>{fallback}</Spin>;
   }
 
-  // 使用getFieldValue获取表单字段的当前值，否则在懒加载中会获取不到值
+  // 使用 getFieldValue 获取表单字段的当前值，否则懒加载组件挂载时可能拿不到初始值。
   const fieldValue = form ? form.getFieldValue(name) : undefined;
 
-  /** 使用setFieldValue设置表单字段的值，改为非受控组件 */
+  /** 使用 setFieldValue 写回表单字段，兼容原生事件和 Select/DatePicker 这类直接值回调。 */
   const handleChange = (newValue: unknown) => {
-    // 处理e.target.value情况
+    // 处理 e.target.value 情况，例如 Input/TextArea 的原生 change 事件。
     let actualValue = newValue;
     if (newValue && typeof newValue === 'object' && 'target' in newValue) {
       const event = newValue as React.ChangeEvent<HTMLInputElement>;
@@ -147,7 +151,7 @@ function LazyComponentWrapper({
     if (form && name) {
       form?.setFieldValue?.(name, actualValue);
     }
-    // 如果有onChange回调，也调用它
+    // 保留业务传入的 onChange，避免封装层吞掉页面自己的副作用逻辑。
     if (componentProps?.onChange) {
       componentProps.onChange(actualValue);
     }
@@ -180,6 +184,7 @@ const handleInputProps = (componentProps?: ComponentProps) => {
   }
 
   const newComponentProps = cloneDeep(componentProps) as unknown as CurrentInputProps;
+  // 这些参数属于 ApiSelect/业务组件，直接传给 Input 会被 React 输出到 DOM 并产生告警。
   delete newComponentProps?.children;
   delete newComponentProps?.api;
   delete newComponentProps?.apiResultKey;
@@ -200,6 +205,7 @@ export function getComponent(t: TFunction, item: BaseFormList, form: FormInstanc
     e.preventDefault();
     const onPressEnter = (componentProps as InputProps)?.onPressEnter;
 
+    // 输入框回车默认提交表单；业务传入 onPressEnter 时则优先执行业务自定义逻辑。
     if (onPressEnter) {
       onPressEnter?.(e);
     } else {
@@ -216,20 +222,20 @@ export function getComponent(t: TFunction, item: BaseFormList, form: FormInstanc
     />
   );
 
-  // 当组件类型为自定义时
+  // 当组件类型为自定义时，把 render 注册到运行时组件表，再走统一组件渲染逻辑。
   if (component === 'customize') {
     const { render } = item;
-    // 获取组件自定义渲染失败直接返回空标签
+    // 自定义渲染缺失时降级为 Input，保证表单不会因为配置错误整块空白。
     if (!render) return renderInput;
     addComponent('customize', render);
   }
 
-  // 对于Input组件，直接返回
+  // Input 是最高频控件，直接同步渲染，避免每个普通输入框都经过 Suspense。
   if (component === 'Input') {
     return renderInput;
   }
 
-  // 查找懒加载组件
+  // 查找懒加载组件，命中后交给包装层处理字段值同步。
   const LazyComponent = lazyComponents.get(component);
 
   // 如果找到对应的懒加载组件，返回包装后的组件
@@ -246,10 +252,10 @@ export function getComponent(t: TFunction, item: BaseFormList, form: FormInstanc
     );
   }
 
-  // 尝试获取已加载的组件
+  // 尝试获取业务注入的同步组件。
   const Comp = loadedComponents.get(component);
 
-  // 获取组件失败直接返回空标签
+  // 获取组件失败时降级为 Input，降低错误配置对页面可用性的影响。
   if (!Comp) return renderInput;
 
   return (
@@ -279,5 +285,5 @@ export function deleteComponent(name: ComponentType): void {
   lazyComponents.delete(name);
 }
 
-// 业务组件注入
+// 启动时注入业务组件，让配置表单可以通过 component 字段直接引用项目内的业务控件。
 CreateBusiness();

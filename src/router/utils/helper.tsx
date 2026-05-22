@@ -3,7 +3,8 @@ import { lazy } from 'react';
 import { ROUTER_EXCLUDE } from './config';
 
 /**
- * 路由添加layout
+ * 路由添加 layout。
+ * 当前项目中登录页、找回密码页等独立页面不进入后台 Layout，其余业务页面由 Guards/Layout 统一包裹。
  * @param routes - 路由数据
  */
 export function layoutRoutes(routes: RouteObject[]): RouteObject[] {
@@ -21,7 +22,9 @@ export function layoutRoutes(routes: RouteObject[]): RouteObject[] {
 }
 
 /**
- * 处理路由
+ * 处理自动路由。
+ * Vite 的 import.meta.glob 会返回页面文件路径和动态 import 函数，本方法负责把文件路径转换成
+ * react-router 可识别的 RouteObject。新增页面时通常只需要在 pages 下建文件，不必手动维护路由表。
  * @param routes - 路由数据
  */
 export function handleRoutes(routes: Record<string, () => Promise<any>>): RouteObject[] {
@@ -35,7 +38,7 @@ export function handleRoutes(routes: Record<string, () => Promise<any>>): RouteO
     const path = getRouterPage(key);
     if (path === '/login') continue;
 
-    // 使用 React.lazy 包装动态导入的组件
+    // 使用 React.lazy 包装动态导入的组件，业务页面按路由分包加载。
     const LazyComponent = lazy(async () => {
       const module = await routes[key]();
       // 处理不同的模块导出格式
@@ -65,6 +68,7 @@ const ROUTER_EXCLUDE_REGEX = new RegExp(
  * @param path - 路径
  */
 function handleRouterExclude(path: string): boolean {
+  // ROUTER_EXCLUDE 可配置 components、model 等目录/文件，避免它们被错误暴露成页面地址。
   return ROUTER_EXCLUDE_REGEX.test(path);
 }
 
@@ -106,5 +110,6 @@ function getRouterPage(path: string): string {
     result = handleRouterDynamic(result);
   }
 
+  // 返回值会直接作为浏览器访问路径，例如 pages/system/user/index.tsx -> /system/user。
   return result;
 }

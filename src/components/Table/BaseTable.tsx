@@ -17,6 +17,11 @@ import './index.less';
 
 type Components = TableProps<object>['components'];
 
+/**
+ * 项目通用表格组件。
+ * 在 Ant Design Table 基础上统一封装：顶部操作栏、列显隐/排序、列宽拖拽、枚举映射、
+ * 文本省略、移动端固定列降级以及可选虚拟滚动。业务页面只需要关注 columns/dataSource/getPage。
+ */
 interface Props extends Omit<TableProps<object>, 'bordered'> {
   isLoading?: boolean; // 是否加载
   isBordered?: boolean; // 是否开启边框
@@ -24,13 +29,13 @@ interface Props extends Omit<TableProps<object>, 'bordered'> {
   isVirtual?: boolean; // 是否开启虚拟滚动
   isOperate?: boolean; // 是否开启顶部操作栏
   isAuthHeight?: boolean; // 是否自动计算高度
-  isCreate?: boolean;
-  scrollX?: number;
-  scrollY?: number;
+  isCreate?: boolean; // 是否显示新增按钮
+  scrollX?: number; // 横向滚动宽度，不传时由表格内容决定
+  scrollY?: number; // 纵向滚动高度，不传且开启 isAuthHeight 时自动计算
   leftContent?: ReactNode; // 左侧额外内容
   rightContent?: ReactNode; // 右侧额外内容
-  getPage?: () => void;
-  onCreate?: () => void;
+  getPage?: () => void; // 刷新/重新获取表格数据
+  onCreate?: () => void; // 新增按钮点击回调
 }
 
 function BaseTable(props: Props) {
@@ -60,16 +65,24 @@ function BaseTable(props: Props) {
   const [sortList, setSortList] = useState<string[]>([]);
   const rows = tableRef.current?.querySelectorAll('.ant-table-row');
 
-  // 清除自定义属性
+  // 清除 BaseTable 自定义属性，只把 Antd Table 能识别的参数继续向下传递。
   const params: Partial<Props> = { ...props };
   delete params.isLoading;
   delete params.isVirtual;
   delete params.isCreate;
+  delete params.isZebra;
+  delete params.isAuthHeight;
   delete params.isBordered;
   delete params.isOperate;
-  delete (params as TableColumn).enum;
+  delete params.scrollX;
+  delete params.scrollY;
+  delete params.leftContent;
+  delete params.rightContent;
+  delete params.getPage;
+  delete params.onCreate;
 
   useEffect(() => {
+    // 初始化列配置和列过滤器的可选项。列显隐、排序列表共用同一批 dataIndex。
     const newColumns = filterTableColumns(props.columns as TableColumn[]);
     const columnKeys = newColumns?.map((col) => col.dataIndex).filter(Boolean) as string[];
     setColumns(newColumns);
@@ -117,7 +130,7 @@ function BaseTable(props: Props) {
     [columns],
   );
 
-  // 合并列表
+  // 合并最终表格列配置：这里集中处理列显隐、列宽拖拽、枚举显示、文本省略等横切能力。
   const mergedColumns = useMemo(() => {
     const newColumns = handleFilterTable(columns, tableFilters, sortList);
     if (!newColumns) return [];
@@ -150,6 +163,7 @@ function BaseTable(props: Props) {
         const enumList = (col as TableColumn)?.enum;
 
         if (enumList && typeof enumList === 'object') {
+          // enum 支持数组和对象两种写法：数组可额外配置颜色/展示类型，对象适合简单字典。
           if (Array.isArray(enumList)) {
             for (let i = 0; i < enumList?.length; i++) {
               const item = enumList[i];
@@ -176,6 +190,7 @@ function BaseTable(props: Props) {
           if (isStringArr) showValue = showValue?.join(', ') || EMPTY_VALUE;
         }
 
+        // 原始值、枚举值和字符串数组走统一省略/标签逻辑；ReactNode 则交还给业务 render 自行控制。
         if (!['object', 'function'].includes(typeof renderContent) || isStringArr) {
           const textContent = String(showValue ?? EMPTY_VALUE);
 
@@ -206,7 +221,7 @@ function BaseTable(props: Props) {
     return result;
   }, [columns, tableFilters, sortList, isPhone, size, handleFilterTable]);
 
-  // 虚拟滚动操作值
+  // 虚拟滚动所需的尺寸数据。行高优先读取真实 DOM，首屏无数据时再用表格尺寸兜底。
   const virtualOptions = useVirtualTable({
     height: tableHeight, // 设置可视高度
     rowHeight: rows?.[0]?.clientHeight || handleRowHeight(size),
@@ -235,7 +250,7 @@ function BaseTable(props: Props) {
         },
       };
 
-  // 滚动
+  // 滚动配置统一在封装层处理，业务页面无需重复计算自适应高度。
   const scroll = {
     ...props.scroll,
     x: scrollX ?? 'max-content',
@@ -306,7 +321,7 @@ function BaseTable(props: Props) {
           rowKey="id"
           pagination={false}
           loading={isLoading}
-          {...props}
+          {...params}
           rowClassName={handleRowClassName}
           style={{
             borderRadius: 10,

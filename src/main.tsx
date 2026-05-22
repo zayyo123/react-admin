@@ -25,7 +25,14 @@ dayjs.locale('zh-cn');
 import { initPerformanceMonitoring } from '@/utils/performance';
 import { initSentry } from '@/utils/sentry';
 
-// 初始化全局错误处理（防止应用崩溃和自动刷新）- 必须同步执行
+/**
+ * 全局错误兜底。
+ *
+ * 这里放在 React 渲染之前同步执行，原因是：
+ * 1. 有些异步错误可能发生在 React 组件树挂载之前；
+ * 2. unhandledrejection 默认可能在控制台产生噪音，甚至被某些运行环境当作致命错误；
+ * 3. 这里先统一阻止默认行为并打印日志，真正的错误上报延迟交给 Sentry 初始化后处理。
+ */
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     event.preventDefault();
@@ -37,21 +44,35 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// 优先渲染应用，减少首屏加载时间
+/**
+ * 优先渲染主应用。
+ *
+ * Sentry、性能监控这类非首屏必需功能会放到后面延迟初始化，
+ * 避免监控 SDK 初始化影响用户看到页面的速度。
+ */
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <StyleProvider hashPriority="high" transformers={[legacyLogicalPropertiesTransformer]}>
     <Router />
   </StyleProvider>,
 );
 
-// 关闭loading
+/**
+ * 关闭 index.html 中的首屏 loading。
+ *
+ * first 节点由静态 HTML 提供，React 应用挂载后就可以隐藏，
+ * 避免用户看到加载动画覆盖真实页面。
+ */
 const firstElement = document.getElementById('first');
 if (firstElement && firstElement.style?.display !== 'none') {
   firstElement.style.display = 'none';
 }
 
-// 延迟初始化非关键服务，不阻塞首屏渲染
-// 使用 requestIdleCallback 在浏览器空闲时初始化，或使用 setTimeout 作为降级方案
+/**
+ * 延迟初始化非关键服务。
+ *
+ * requestIdleCallback 会等浏览器空闲时再执行，适合放性能统计、错误上报等非关键逻辑。
+ * 如果浏览器不支持，则退化为 setTimeout，保证功能仍然会被初始化。
+ */
 const deferredInit = () => {
   // 初始化性能监控
   initPerformanceMonitoring();
