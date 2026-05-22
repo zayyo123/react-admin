@@ -1,5 +1,5 @@
 import { type TableProps, type CheckboxProps, Button, Popover, Divider, Checkbox } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { SettingOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { TableColumn } from '#/public';
@@ -35,7 +35,7 @@ function TableFilter(props: Props) {
 
   useEffect(() => {
     filterColumns(columns);
-  }, [columns]);
+  }, []);
 
   /** 处理点击事件 */
   const handleClick = () => {
@@ -162,7 +162,7 @@ function TableFilter(props: Props) {
       trigger="click"
       placement="bottom"
       styles={{
-        body: {
+        container: {
           padding: '8px 0 5px',
         },
       }}
@@ -178,4 +178,8 @@ function TableFilter(props: Props) {
   );
 }
 
-export default TableFilter;
+export default memo(TableFilter, (prevProps, nextProps) => {
+  return (
+    prevProps.columns === nextProps.columns && prevProps.cacheColumns === nextProps.cacheColumns
+  );
+});

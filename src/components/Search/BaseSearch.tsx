@@ -1,14 +1,6 @@
 import type { ColProps, FormInstance } from 'antd';
 import type { BaseFormData, BaseSearchList } from '#/form';
-import {
-  type CSSProperties,
-  type ReactNode,
-  type Ref,
-  forwardRef,
-  useEffect,
-  useState,
-  useMemo,
-} from 'react';
+import { type CSSProperties, type ReactNode, type Ref, useEffect, useState, useMemo } from 'react';
 import { type FormProps, Button, Col, Flex } from 'antd';
 import { Form } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +23,8 @@ interface Props extends FormProps {
   style?: CSSProperties;
   className?: string;
   type?: 'default' | 'grid';
+  ref?: Ref<FormInstance>;
+  searchForm?: FormInstance;
   children?: ReactNode;
   labelCol?: Partial<ColProps>;
   wrapperCol?: Partial<ColProps>;
@@ -40,11 +34,13 @@ interface Props extends FormProps {
   handleFinish: FormProps['onFinish'];
 }
 
-const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
+const BaseSearch = (props: Props) => {
   const {
+    ref,
     list,
     data,
     initialValues,
+    searchForm,
     isLoading,
     isSearch = true,
     isReset = true,
@@ -61,9 +57,13 @@ const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
   } = props;
   const { t } = useTranslation();
   const { isPhone } = useCommonStore();
-  const [form] = Form.useForm();
+  let [form] = Form.useForm();
   const [isExpand, setExpand] = useState(false);
   const [isFirst, setFirst] = useState(true);
+
+  if (searchForm) {
+    form = searchForm;
+  }
 
   // 是否展示展开按钮
   const isShowExpand = useMemo(() => {
@@ -183,7 +183,7 @@ const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
 
   /** 渲染按钮列表 */
   const renderBtnList = (
-    <div className="flex items-center flex-wrap gap-10px">
+    <div className="flex flex-wrap gap-10px">
       {!!isSearch && (
         <Button
           type="primary"
@@ -210,7 +210,7 @@ const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
 
       {type === 'grid' && !!isShowExpand && (
         <div
-          className="text-12px cursor-pointer color-#1677ff hover:color-#69b1ff"
+          className="text-12px cursor-pointer color-#1677ff hover:color-#69b1ff mt-8px"
           onClick={() => {
             setExpand(!isExpand);
           }}
@@ -244,7 +244,7 @@ const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
                 wrapperCol={getWrapperCol(item)}
                 valuePropName={handleValuePropName(item.component)}
               >
-                {getComponent(t, item)}
+                {getComponent(t, item, form)}
               </Form.Item>
             ))}
             {renderBtnList}
@@ -265,7 +265,7 @@ const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
                   wrapperCol={getWrapperCol(item)}
                   valuePropName={handleValuePropName(item.component)}
                 >
-                  {getComponent(t, item)}
+                  {getComponent(t, item, form)}
                 </Form.Item>
               </div>
             ))}
@@ -278,6 +278,6 @@ const BaseSearch = forwardRef((props: Props, ref: Ref<FormInstance>) => {
       </Form>
     </div>
   );
-});
+};
 
 export default BaseSearch;

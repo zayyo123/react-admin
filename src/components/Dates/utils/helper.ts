@@ -2,7 +2,7 @@ import type { Dayjs } from 'dayjs';
 import type { DatePickerProps } from 'antd';
 import type { BaseFormData, BaseFormList } from '#/form';
 import type { RangeValueType } from 'rc-picker/lib/PickerInput/RangePicker';
-import { DATE_FORMAT } from '@/utils/config';
+import { DATE_FORMAT, TIME_PICKER_FORMAT } from '@/utils/config';
 import dayjs from 'dayjs';
 
 /**
@@ -28,10 +28,16 @@ export function dayjs2String(value: Dayjs | string, format = DATE_FORMAT): strin
  * 字符串类型转dayjs类型
  * @param value - 字符串
  */
-export function string2Dayjs(value: Dayjs | string): Dayjs {
+export function string2Dayjs(value: Dayjs | string | number): Dayjs {
   if (dayjs.isDayjs(value)) {
     return value;
   }
+
+  // 如果是时间戳
+  if (typeof value === 'number' && isFinite(value)) {
+    return dayjs.unix(value);
+  }
+
   return dayjs(value);
 }
 
@@ -53,22 +59,42 @@ export function dayjsRang2StringRang(value: RangeValue<Dayjs>, format = DATE_FOR
  * @param value - 字符串
  */
 export function stringRang2DayjsRang(
-  value: RangeValueType<string> | RangeValueType<Dayjs>,
+  value: RangeValueType<string | number> | RangeValueType<Dayjs>,
 ): RangeValue<Dayjs> | undefined {
   if (!value) return undefined;
 
   // 当第一个数据都不为Dayjs
   if (value?.length > 1 && !dayjs.isDayjs(value?.[0]) && dayjs.isDayjs(value?.[1])) {
+    // 判断是否是时间戳
+    if (typeof value[0] === 'number' && isFinite(value[0])) {
+      return [dayjs.unix(value[0]), value[1]];
+    }
+
     return [dayjs(value[0]), value[1]];
   }
 
   // 当最后一个数据都不为Dayjs
   if (value?.length > 1 && dayjs.isDayjs(value?.[0]) && !dayjs.isDayjs(value?.[1])) {
+    // 判断是否是时间戳
+    if (typeof value[1] === 'number' && isFinite(value[1])) {
+      return [value[0], dayjs.unix(value[1])];
+    }
+
     return [value[0], dayjs(value[1])];
   }
 
   // 当两个数据都不为Dayjs
   if (value?.length > 1 && !dayjs.isDayjs(value?.[0]) && !dayjs.isDayjs(value?.[1])) {
+    // 判断是否是时间戳
+    if (
+      typeof value[0] === 'number' &&
+      isFinite(value[0]) &&
+      typeof value[1] === 'number' &&
+      isFinite(value[1])
+    ) {
+      return [dayjs.unix(value[0]), dayjs.unix(value[1])];
+    }
+
     return [dayjs(value[0]), dayjs(value[1])];
   }
   return value as RangeValue<Dayjs>;
@@ -82,7 +108,17 @@ export function stringRang2DayjsRang(
 function getListKeyParam(list: BaseFormList[], key: string): string {
   for (let i = 0; i < list.length; i++) {
     if (list[i].name === key) {
-      return ((list[i].componentProps as DatePickerProps)?.format as string) || DATE_FORMAT;
+      let format = DATE_FORMAT; // 默认日期选择器格式
+      // 时间选择器则为HH:mm:ss
+      if (['TimePicker', 'TimeRangePicker'].includes(list[i].component)) {
+        format = TIME_PICKER_FORMAT;
+      }
+      // 有格式化数据则用格式化数据
+      if ((list[i].componentProps as DatePickerProps)?.format) {
+        format = (list[i].componentProps as DatePickerProps)?.format as string;
+      }
+
+      return format;
     }
   }
 

@@ -60,16 +60,23 @@ pnpm dev
 pnpm build
 ```
 
-## 后端项目
-python: [south-admin-django](https://github.com/southliu/south-admin-django)
+## 🌐 后端项目
+![Nest](https://img.shields.io/badge/-Nest-black?style=plastic&logo=node.js) [south-admin-nest](https://github.com/southliu/south-admin-nest)<br/>
+![Python](https://img.shields.io/badge/-Python-black?style=plastic&logo=python) [south-admin-django](https://github.com/southliu/south-admin-django)
 
-## TODO
-- [x] 分页下拉框，触底加载下一页
-- [x] 列筛选添加拖拽功能
-- [x] 列筛选添加重置功能
-- [x] 外链菜单
-- [x] 优化代码，减少不必要的重渲染
-- [x] 开发python后端
+## ✈️ 快速编码
+1. 使用Claude Code的skills（**推荐**）：
+开启Claude Code之后执行`/demo-create`之后一步一步输入。
+
+2. 使用vscode的代码片段，在`.vscode/south.code-snippets`文件中预设了`demoPage`、`demoModel`、`demoApi`等常用代码片段，后续对代码片段不满意可以修改对应的body代码。
+   
+	2.1 打开vscode，在`src/pages`目录下创建你所需的文件夹，以log为例，创建一个`log`文件夹。
+   
+	2.2 在`log`文件夹下创建`model.ts`文件，在该文件下输入`demoModel`后回车，会出现对应的代码片段。
+   
+	2.3 在`src/servers`文件夹下面创建一个`log.ts`文件，在该文件下输入`demoApi`后回车，将XXX改为Log，将xxx改为接口路由。
+   
+	2.4 在`log`文件夹下创建`index.ts`文件，在该文件下输入`demoPage`后回车，将XXX改为Log，将xxx改为对应权限表示。
 
 ## 📁 项目结构
 
@@ -187,6 +194,9 @@ const menuList = defaultMenus;
 
 #### 5. 安装新依赖时报错？
 使用了monorepo项目安装新依赖时需要在后面添加`-w`或`--workspace`，否则会报错，比如：`pnpm i mobx -w`。
+
+#### 6. 无法执行build？
+首先检查是否存在`types/autoImports.d.ts`，如果不存在执行`pnpm dev`，之后再执行`pnpm build`。
 
 ## 🧡 捐赠
 如果您觉得这个项目对您有帮助，您可以帮作者买一杯咖啡表示支持!

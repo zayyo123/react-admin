@@ -7,9 +7,9 @@ import {
   VerticalAlignTopOutlined,
   VerticalAlignMiddleOutlined,
 } from '@ant-design/icons';
-import { useAliveController } from 'react-activation';
 import { useCommonStore } from '@/hooks/useCommonStore';
 import { useTabsStore } from '@/stores';
+import { useShallow } from 'zustand/shallow';
 
 enum ITabEnums {
   REFRESH = 'refresh', // 重新加载
@@ -29,9 +29,10 @@ export function useDropdownMenu(props: Props) {
   const { t } = useTranslation();
   const { activeKey, onOpenChange, handleRefresh } = props;
   const { pathname } = useLocation();
-  const { dropScope } = useAliveController();
   const { tabs } = useCommonStore();
   const { closeLeft, closeOther, closeRight, closeTabs } = useTabsStore((state) => state);
+  const aliveRef = usePublicStore(useShallow((state) => state.aliveRef));
+  const navigate = useNavigate();
 
   // 菜单项
   const items: (key?: string) => MenuProps['items'] = (key = activeKey) => {
@@ -83,22 +84,33 @@ export function useDropdownMenu(props: Props) {
 
       // 关闭当前
       case ITabEnums.CLOSE_CURRENT:
-        closeTabs(key, dropScope);
+        if (activeKey === pathname) {
+          const currentIndex = tabs.findIndex((tab) => tab.key === activeKey);
+          const nextPath = tabs[currentIndex > 0 ? currentIndex - 1 : 0].key;
+          if (nextPath) {
+            navigate(nextPath);
+          }
+        }
+        closeTabs(key, aliveRef.current?.destroy);
+
         break;
 
       // 关闭其他
       case ITabEnums.CLOSE_OTHER:
-        closeOther(key, dropScope);
+        closeOther(key, aliveRef.current?.destroy);
+        navigate(key);
         break;
 
       // 关闭左侧
       case ITabEnums.CLOSE_LEFT:
-        closeLeft(key, dropScope);
+        closeLeft(key, aliveRef.current?.destroy);
+        navigate(key);
         break;
 
       // 关闭右侧
       case ITabEnums.CLOSE_RIGHT:
-        closeRight(key, dropScope);
+        closeRight(key, aliveRef.current?.destroy);
+        navigate(key);
         break;
 
       default:

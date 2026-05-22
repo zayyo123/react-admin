@@ -1,58 +1,80 @@
 import type { RouteObject } from 'react-router-dom';
-import type { DefaultComponent } from '@loadable/component';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { handleRoutes } from '../utils/helper';
-import { useLocation, useRoutes } from 'react-router-dom';
+import { useRoutes } from 'react-router-dom';
 import Login from '@/pages/login';
 import Forget from '@/pages/forget';
 import NotFound from '@/pages/404';
-import nprogress from 'nprogress';
 import Guards from './Guards';
 
-type PageFiles = Record<string, () => Promise<DefaultComponent<unknown>>>;
+type PageFiles = Record<string, () => Promise<any>>;
 // Vite 在构建时收集 pages 下所有页面文件，后续由 helper 转成实际路由。
-const pages = import.meta.glob('../../pages/**/*.tsx') as PageFiles;
-const layouts = handleRoutes(pages);
+const pages = import.meta.glob('../../pages/**/*.tsx', { eager: false }) as PageFiles;
 
-/** 基础路由表：公开页面手动声明，后台页面由 pages 目录自动生成。 */
-const newRoutes: RouteObject[] = [
-  {
-    path: 'login',
-    element: <Login />,
-  },
-  {
-    path: 'forget',
-    element: <Forget />,
-  },
-  {
-    path: '',
-    element: <Guards />,
-    children: layouts,
-  },
-  {
-    path: '*',
-    element: <NotFound />,
-  },
-];
+// 在浏览器空闲时预加载常用组件，路径相对当前 router/components 目录。
+const components = import.meta.glob('../../components/**/*.tsx', { eager: false }) as PageFiles;
+
+// 预加载的路由集合
+const preloadedRoutes = new Set<string>();
+// 预加载的组件集合
+const preloadedComponents = new Set<string>();
 
 function App() {
-  const location = useLocation();
-
-  // 首次挂载时启动顶部进度条，路由切换完成后在下方 effect 中结束。
+  // 预加载路由和组件，把非关键加载挪到浏览器空闲阶段，降低页面首次交互压力。
   useEffect(() => {
-    nprogress.start();
+    if ('requestIdleCallback' in window) {
+      const idleCallbackId = (requestIdleCallback as any)(() => {
+        Object.entries(pages).forEach(([path]) => {
+          if (preloadedRoutes.has(path)) return;
+          preloadedRoutes.add(path);
+          pages[path]().catch(() => {
+            console.error('预加载路由错误：', path);
+          });
+        });
+
+        Object.entries(components).forEach(([path]) => {
+          if (preloadedComponents.has(path)) return;
+          preloadedComponents.add(path);
+          components[path]().catch(() => {
+            console.error('预加载组件错误：', path);
+          });
+        });
+      });
+
+      return () => {
+        if ('cancelIdleCallback' in window) {
+          (cancelIdleCallback as any)(idleCallbackId);
+        }
+      };
+    }
   }, []);
 
-  // 每次路由变化完成后关闭进度条，并在下一次变化前重新启动。
-  useEffect(() => {
-    nprogress.done();
+  // 缓存路由配置，避免 App 组件重渲染时重复生成路由对象。
+  const routes = useMemo(() => {
+    const layouts = handleRoutes(pages);
+    const newRoutes: RouteObject[] = [
+      {
+        path: 'login',
+        element: <Login />,
+      },
+      {
+        path: 'forget',
+        element: <Forget />,
+      },
+      {
+        path: '',
+        element: <Guards />,
+        children: layouts,
+      },
+      {
+        path: '*',
+        element: <NotFound />,
+      },
+    ];
+    return newRoutes;
+  }, []);
 
-    return () => {
-      nprogress.start();
-    };
-  }, [location]);
-
-  return <>{useRoutes(newRoutes)}</>;
+  return <>{useRoutes(routes)}</>;
 }
 
 export default App;

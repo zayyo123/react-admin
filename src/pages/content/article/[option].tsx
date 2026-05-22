@@ -1,27 +1,13 @@
 import { Form, type FormInstance, message, Spin } from 'antd';
 import { createList } from './model';
+import { useShallow } from 'zustand/shallow';
 import { getUrlParam } from '@/utils/helper';
-import { useActivate, useAliveController } from 'react-activation';
+import { useEffectOnActive } from 'keepalive-for-react';
 import { getArticleById, createArticle, updateArticle } from '@/servers/content/article';
-
-interface RecordType {
-  key: string;
-  title: string;
-  description: string;
-}
-
-const mockData: RecordType[] = Array.from({ length: 20 }).map((_, i) => ({
-  key: i.toString(),
-  title: `content${i + 1}`,
-  description: `description of content${i + 1}`,
-}));
-
-const initialTargetKeys = mockData.filter((item) => Number(item.key) > 10).map((item) => item.key);
 
 // 初始化新增数据
 const initCreate = {
   content: '<h4>初始化内容</h4>',
-  transfer: initialTargetKeys,
 };
 
 // 父路径
@@ -39,7 +25,8 @@ function Page() {
   const [createData, setCreateData] = useState<BaseFormData>(initCreate);
   const [messageApi, contextHolder] = message.useMessage();
   const { permissions } = useCommonStore();
-  const { dropScope } = useAliveController();
+  const navigate = useNavigate();
+  const aliveRef = usePublicStore(useShallow((state) => state.aliveRef));
   const closeTabGoNext = useTabsStore((state) => state.closeTabGoNext);
   const setRefreshPage = usePublicStore((state) => state.setRefreshPage);
   useSingleTab({
@@ -66,7 +53,7 @@ function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useActivate(() => {
+  useEffectOnActive(() => {
     const { href } = window.location;
     const newId = href.split('?')[1]?.split('=')[1];
 
@@ -79,11 +66,6 @@ function Page() {
       }
       currentId.current = newId || '';
     }
-  });
-
-  // 异步添加富文本组件
-  useLayoutEffect(() => {
-    addComponent('RichEditor', WangEditor);
   }, []);
 
   /** 处理新增 */
@@ -123,8 +105,9 @@ function Page() {
     closeTabGoNext({
       key: pathname,
       nextPath: fatherPath,
-      dropScope,
+      dropScope: aliveRef.current?.destroy,
     });
+    navigate(fatherPath);
   };
 
   /**
@@ -150,7 +133,7 @@ function Page() {
       {contextHolder}
       <div className="!h-[calc(100vh-98px)] ">
         <BaseCard>
-          <div className="mb-50px">
+          <div className="mt-20px mb-50px">
             <Spin spinning={isLoading}>
               <BaseForm
                 form={form}

@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import type { CustomizeRender } from '#/form';
 import AuthorizeSelect from './components/AuthorizeSelect';
 
 // 搜索数据
@@ -69,6 +70,9 @@ export const createList = (t: TFunction, id: string): BaseFormList[] => [
     name: 'authorize',
     rules: FORM_REQUIRED,
     component: 'customize',
-    render: AuthorizeSelect,
+    render: AuthorizeSelect as unknown as CustomizeRender,
+    componentProps: {
+      id,
+    },
   },
 ];

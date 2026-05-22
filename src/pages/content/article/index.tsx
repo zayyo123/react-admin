@@ -1,5 +1,7 @@
+import { useEffectOnActive } from 'keepalive-for-react';
 import { searchList, tableColumns } from './model';
 import { message } from 'antd';
+import { useMemo, useCallback } from 'react';
 import { getArticlePage, deleteArticle } from '@/servers/content/article';
 
 // 当前行数据
@@ -28,7 +30,7 @@ function Page() {
 
   // 权限
   const pagePermission: PagePermission = {
-    page: checkPermission(`${permissionPrefix}/index`, permissions),
+    page: checkPermission(permissionPrefix, permissions),
     create: checkPermission(`${permissionPrefix}/create`, permissions),
     update: checkPermission(`${permissionPrefix}/update`, permissions),
     delete: checkPermission(`${permissionPrefix}/delete`, permissions),
@@ -57,6 +59,19 @@ function Page() {
     if (isFetch) getPage();
   }, [getPage, isFetch]);
 
+  // 每次进入时加载数据
+  useEffectOnActive(() => {
+    // 如果正在刷新页面，不需要重复加载
+    if (isRefreshPage) {
+      setRefreshPage(false);
+      return;
+    }
+    // 检查权限后加载数据
+    if (pagePermission.page) {
+      getPage();
+    }
+  }, [pagePermission.page, isRefreshPage, getPage]);
+
   /**
    * 点击搜索
    * @param values - 表单返回数据
@@ -66,12 +81,6 @@ function Page() {
     setSearchData(values);
     setFetch(true);
   };
-
-  // 首次进入自动加载接口数据
-  useEffect(() => {
-    if (pagePermission.page && !isRefreshPage) getPage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagePermission.page]);
 
   // 如果是新增或编辑成功重新加载页面
   useEffect(() => {
@@ -128,19 +137,25 @@ function Page() {
    * @param _ - 当前值
    * @param record - 当前行参数
    */
-  const optionRender: TableOptions<object> = (_, record) => (
-    <div className="flex flex-wrap gap-5px">
-      {pagePermission.update === true && (
-        <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
-      )}
-      {pagePermission.delete === true && (
-        <DeleteBtn
-          name={(record as RowData).title}
-          handleDelete={() => onDelete((record as RowData).id)}
-        />
-      )}
-    </div>
+  const optionRender = useCallback(
+    (_: unknown, record: object) => (
+      <div className="flex flex-wrap gap-5px">
+        {pagePermission.update === true && (
+          <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
+        )}
+        {pagePermission.delete === true && (
+          <DeleteBtn
+            name={(record as RowData).title}
+            handleDelete={() => onDelete((record as RowData).id)}
+          />
+        )}
+      </div>
+    ),
+    [pagePermission.update, pagePermission.delete, onUpdate, onDelete],
   );
+
+  // 缓存列配置
+  const columns = useMemo(() => tableColumns(t, optionRender), [t, optionRender]);
 
   return (
     <BaseContent isPermission={pagePermission.page}>
@@ -158,7 +173,7 @@ function Page() {
         <BaseTable
           isLoading={isLoading}
           isCreate={pagePermission.create}
-          columns={tableColumns(t, optionRender)}
+          columns={columns}
           dataSource={tableData}
           getPage={getPage}
           onCreate={onCreate}

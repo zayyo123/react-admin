@@ -1,6 +1,8 @@
 import type { BaseFormData } from '#/form';
 import type { PagePermission } from '#/public';
 import { Button, Drawer, Form, type FormInstance, message, Spin } from 'antd';
+import { useMemo, useCallback } from 'react';
+import { useEffectOnActive } from 'keepalive-for-react';
 import { searchList, createList, tableColumns } from './model';
 import {
   getRolePage,
@@ -24,7 +26,6 @@ const initCreate = {
 function Page() {
   const { t } = useTranslation();
   const createFormRef = useRef<FormInstance>(null);
-  const columns = tableColumns(t, optionRender);
   const [isFetch, setFetch] = useState(false);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [isLoading, setLoading] = useState(false);
@@ -39,14 +40,14 @@ function Page() {
   const [tableData, setTableData] = useState<BaseFormData[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
-  const { permissions } = useCommonStore();
+  const { permissions, roles } = useCommonStore();
 
   // 权限前缀
   const permissionPrefix = '/authority/role';
 
   // 权限
   const pagePermission: PagePermission = {
-    page: checkPermission(`${permissionPrefix}/index`, permissions),
+    page: checkPermission(permissionPrefix, permissions),
     create: checkPermission(`${permissionPrefix}/create`, permissions),
     update: checkPermission(`${permissionPrefix}/update`, permissions),
     delete: checkPermission(`${permissionPrefix}/delete`, permissions),
@@ -74,6 +75,17 @@ function Page() {
     if (isFetch) getPage();
   }, [getPage, isFetch]);
 
+  // 首次进入自动加载接口数据
+  useEffect(() => {
+    if (pagePermission.page) getPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagePermission.page]);
+
+  // 每次进入调用
+  useEffectOnActive(() => {
+    getPage();
+  }, []);
+
   /**
    * 点击搜索
    * @param values - 表单返回数据
@@ -83,12 +95,6 @@ function Page() {
     setSearchData(values);
     setFetch(true);
   };
-
-  // 首次进入自动加载接口数据
-  useEffect(() => {
-    if (pagePermission.page) getPage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagePermission.page]);
 
   /** 点击新增 */
   const onCreate = () => {
@@ -177,21 +183,27 @@ function Page() {
    * @param _ - 当前值
    * @param record - 当前行参数
    */
-  function optionRender(_: unknown, record: object) {
-    return (
-      <div className="flex flex-wrap gap-5px">
-        {pagePermission.update === true && (
-          <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
-        )}
-        {pagePermission.delete === true && (
-          <DeleteBtn
-            name={(record as RowData).name}
-            handleDelete={() => onDelete((record as RowData).id)}
-          />
-        )}
-      </div>
-    );
-  }
+  const optionRender = useCallback(
+    (_: unknown, record: object) => {
+      return (
+        <div className="flex flex-wrap gap-5px">
+          {pagePermission.update === true && (
+            <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
+          )}
+          {pagePermission.delete === true && (
+            <DeleteBtn
+              name={(record as RowData).name}
+              handleDelete={() => onDelete((record as RowData).id)}
+            />
+          )}
+        </div>
+      );
+    },
+    [pagePermission.update, pagePermission.delete, onUpdate, onDelete],
+  );
+
+  // 缓存列配置
+  const columns = useMemo(() => tableColumns(t, optionRender), [t, optionRender]);
 
   return (
     <BaseContent isPermission={pagePermission.page}>
@@ -243,7 +255,7 @@ function Page() {
           <BaseForm
             form={form}
             ref={createFormRef}
-            list={createList(t, createId)}
+            list={createList(t, roles?.join(','))}
             data={createData}
             labelCol={{ span: 4 }}
             wrapperCol={{ span: 19 }}

@@ -13,6 +13,7 @@ import type {
   TimeRangePickerProps,
   TransferProps,
   FormItemProps,
+  SwitchProps,
 } from 'antd';
 import type {
   ApiSelectProps,
@@ -26,6 +27,7 @@ import type { RuleObject } from 'antd/lib/form';
 import type { ServerResult } from '@south/request';
 import type { BusinessComponents } from '@/components/Business';
 import type { EditorProps } from '@/components/WangEditor';
+import type { TextAreaProps } from 'antd/es/input';
 
 // 数据类型
 export type BaseFormData = Record<string, unknown>;
@@ -103,6 +105,7 @@ export type ApiFn = {
 export type ComponentProps =
   | InputProps
   | InputNumberProps
+  | TextAreaProps
   | SelectProps
   | TreeSelectProps
   | CheckboxProps
@@ -118,11 +121,13 @@ export type ComponentProps =
   | ApiSelectProps
   | ApiTreeSelectProps
   | ApiPageSelectProps
+  | SwitchProps
   | EditorProps;
 
 // 组件参数
 export type RenderComponentProps = InputProps &
   InputNumberProps &
+  TextAreaProps &
   SelectProps &
   TreeSelectProps &
   CheckboxProps &
@@ -145,6 +150,9 @@ export type FormRule = RuleObject & {
   trigger?: 'blur' | 'change' | ['change', 'blur'];
 };
 
+// 表单自定义渲染类型
+export type CustomizeRender = (props: RenderComponentProps) => ReactNode;
+
 // 表单数据
 export interface BaseFormList extends FormItemProps {
   name: string | string[]; // 表单域字段
@@ -157,7 +165,7 @@ export interface BaseFormList extends FormItemProps {
   wrapperWidth?: number; // 内容宽度
   component: ComponentType; // 组件
   componentProps?: ComponentProps; // 组件参数
-  render?: (props: RenderComponentProps) => ReactNode; // 自定义渲染
+  render?: CustomizeRender; // 自定义渲染
 }
 
 // 搜索数据

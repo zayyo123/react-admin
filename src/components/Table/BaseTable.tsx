@@ -2,7 +2,7 @@ import type { ResizeCallbackData } from 'react-resizable';
 import type { ColumnsType } from 'antd/es/table';
 import type { EnumShowType, TableColumn } from '#/public';
 import { type TableProps, Table, Button, message, Tag } from 'antd';
-import { useMemo, useState, useEffect, useRef, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback, memo, type ReactNode } from 'react';
 import { useFiler } from './hooks/useFiler';
 import { useTranslation } from 'react-i18next';
 import { EMPTY_VALUE } from '@/utils/config';
@@ -75,23 +75,17 @@ function BaseTable(props: Props) {
     setColumns(newColumns);
     setTableFilters(columnKeys);
     setSortList(columnKeys);
-  }, [props.columns]);
+  }, []);
 
   // 添加新增缺少方法警告
-  useEffect(() => {
-    if (isCreate && !onCreate) {
-      message.warning(t('public.createMethodWarning'));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCreate]);
+  if (isCreate && !onCreate) {
+    message.warning(t('public.createMethodWarning'));
+  }
 
   // 添加分页缺少方法警告
-  useEffect(() => {
-    if (isOperate && !getPage) {
-      message.warning(t('public.getPageWarning'));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getPage]);
+  if (isOperate && !getPage) {
+    message.warning(t('public.getPageWarning'));
+  }
 
   // 表格高度
   const tableHeight = getTableHeight(tableRef.current);
@@ -109,19 +103,22 @@ function BaseTable(props: Props) {
    * 处理拖拽
    * @param index - 下标
    */
-  const handleResize = (index: number) => {
-    return (_: React.SyntheticEvent<Element>, { size }: ResizeCallbackData) => {
-      const newColumns = [...columns];
-      newColumns[index] = {
-        ...newColumns[index],
-        width: size.width,
+  const handleResize = useCallback(
+    (index: number) => {
+      return (_: React.SyntheticEvent<Element>, { size }: ResizeCallbackData) => {
+        const newColumns = [...columns];
+        newColumns[index] = {
+          ...newColumns[index],
+          width: size.width,
+        };
+        setColumns(newColumns);
       };
-      setColumns(newColumns);
-    };
-  };
+    },
+    [columns],
+  );
 
   // 合并列表
-  const mergeColumns = () => {
+  const mergedColumns = useMemo(() => {
     const newColumns = handleFilterTable(columns, tableFilters, sortList);
     if (!newColumns) return [];
     const result = newColumns.map((col, index) => ({
@@ -189,7 +186,7 @@ function BaseTable(props: Props) {
 
           // 超出不省略则换行
           if (col.ellipsis !== undefined && !col.ellipsis) {
-            return <div style={{ maxWidth: col.width }}>{textContent}</div>;
+            return <span className="break-all break-words whitespace-pre-wrap">{textContent}</span>;
           }
 
           return (
@@ -197,7 +194,7 @@ function BaseTable(props: Props) {
               width={col.width}
               text={textContent}
               color={color}
-              className="break-all inline-block"
+              className="break-all"
             />
           );
         }
@@ -207,7 +204,7 @@ function BaseTable(props: Props) {
     }));
 
     return result;
-  };
+  }, [columns, tableFilters, sortList, isPhone, size, handleFilterTable]);
 
   // 虚拟滚动操作值
   const virtualOptions = useVirtualTable({
@@ -321,11 +318,17 @@ function BaseTable(props: Props) {
           bordered={isBordered !== false}
           scroll={scroll}
           components={components}
-          columns={mergeColumns() as ColumnsType<object>}
+          columns={mergedColumns as ColumnsType<object>}
         />
       </div>
     </div>
   );
 }
 
-export default BaseTable;
+export default memo(BaseTable, (prevProps, nextProps) => {
+  return (
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.dataSource === nextProps.dataSource &&
+    prevProps.columns === nextProps.columns
+  );
+});

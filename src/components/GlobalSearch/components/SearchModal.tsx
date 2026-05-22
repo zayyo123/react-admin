@@ -1,7 +1,7 @@
 import type { SideMenu } from '#/public';
 import type { InputProps, InputRef } from 'antd';
-import { Ref, useImperativeHandle, useLayoutEffect } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import type { Ref } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle } from 'react';
 import { debounce } from 'lodash';
 import { Modal, Input } from 'antd';
 import { Icon } from '@iconify/react';
@@ -43,14 +43,15 @@ function SearchModal(props: Props) {
   }));
 
   // 聚焦输入框
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (isOpen) {
-      // 转为宏任务防止聚焦失效
-      setTimeout(() => {
+      // 防止聚焦失效
+      requestAnimationFrame(() => {
+        // 聚焦输入框
         inputRef.current?.focus({
           cursor: 'end',
         });
-      }, 0);
+      });
     }
 
     // 退出时清空数据

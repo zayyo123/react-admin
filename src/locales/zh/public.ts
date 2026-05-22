@@ -77,4 +77,7 @@ export default {
   tableSelectWarning: '请勾选表格数据',
   menuSearchPlaceholder: '请输入菜单名称',
   noMoreData: '没有更多数据',
+  noLoginVisit: '未登录无法访问',
+  loading: '加载中',
+  uploadFile: '上传文件',
 };

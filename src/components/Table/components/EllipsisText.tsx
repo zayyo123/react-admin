@@ -21,8 +21,7 @@ const EllipsisText = (props: EllipsisTextProps) => {
       // 检查文本是否溢出
       setIsOverflowed(element.scrollWidth > element.clientWidth);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, width]);
+  }, [text, width, textRef.current]);
 
   useEffect(() => {
     calculateOverflow();
@@ -36,7 +35,7 @@ const EllipsisText = (props: EllipsisTextProps) => {
   const content = (
     <span
       ref={textRef}
-      className={`block w-full overflow-hidden text-ellipsis whitespace-nowrap ${className}`}
+      className={`inline-block w-full overflow-hidden text-ellipsis whitespace-nowrap ${className}`}
       style={textStyle}
     >
       {text}

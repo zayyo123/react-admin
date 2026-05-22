@@ -1,8 +1,8 @@
-import type { DataNode } from 'antd/es/tree';
 import type { Key, TableRowSelection } from 'antd/es/table/interface';
 import { type FormInstance, Button, Form, message } from 'antd';
+import { useMemo, useCallback } from 'react';
+import { useEffectOnActive } from 'keepalive-for-react';
 import { createList, searchList, tableColumns } from './model';
-import { getPermission, savePermission } from '@/servers/system/menu';
 import {
   batchDeleteUser,
   createUser,
@@ -27,8 +27,6 @@ const initCreate = {
 function Page() {
   const { t } = useTranslation();
   const createFormRef = useRef<FormInstance>(null);
-  const [handleSetSearchParams] = useSearchUrlParams();
-  const columns = tableColumns(t, optionRender);
   const [messageApi, contextHolder] = message.useMessage();
   const [isFetch, setFetch] = useState(false);
   const [isLoading, setLoading] = useState(false);
@@ -42,13 +40,12 @@ function Page() {
   const [pageSize, setPageSize] = useState(INIT_PAGINATION.pageSize);
   const [total, setTotal] = useState(0);
   const [tableData, setTableData] = useState<BaseFormData[]>([]);
-
   const [promiseId, setPromiseId] = useState('');
-  const [isPromiseVisible, setPromiseVisible] = useState(false);
-  const [promiseCheckedKeys, setPromiseCheckedKeys] = useState<Key[]>([]);
-  const [promiseTreeData, setPromiseTreeData] = useState<DataNode[]>([]);
+  const [isPromiseOpen, setPromiseOpen] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [form] = Form.useForm();
+  const [searchForm] = Form.useForm();
+  const [handleSetSearchParams] = useSearchUrlParams(searchForm);
 
   const { permissions } = useCommonStore();
 
@@ -57,7 +54,7 @@ function Page() {
 
   // 权限
   const pagePermission: PagePermission = {
-    page: checkPermission(`${permissionPrefix}/index`, permissions),
+    page: checkPermission(permissionPrefix, permissions),
     create: checkPermission(`${permissionPrefix}/create`, permissions),
     update: checkPermission(`${permissionPrefix}/update`, permissions),
     delete: checkPermission(`${permissionPrefix}/delete`, permissions),
@@ -85,6 +82,17 @@ function Page() {
     if (isFetch) getPage();
   }, [getPage, isFetch]);
 
+  // 首次进入自动加载接口数据
+  useEffect(() => {
+    if (pagePermission.page) getPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagePermission.page]);
+
+  // 每次进入调用
+  useEffectOnActive(() => {
+    getPage();
+  }, []);
+
   /**
    * 点击搜索
    * @param values - 表单返回数据
@@ -96,51 +104,15 @@ function Page() {
     setFetch(true);
   };
 
-  // 首次进入自动加载接口数据
-  useEffect(() => {
-    if (pagePermission.page) getPage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagePermission.page]);
-
   /** 开启权限 */
   const openPermission = async (id: string) => {
-    try {
-      setLoading(true);
-      const params = { userId: id };
-      const { code, data } = await getPermission(params);
-      if (Number(code) !== 200) return;
-      const { defaultCheckedKeys, treeData } = data;
-      setPromiseId(id);
-      setPromiseTreeData(treeData);
-      setPromiseCheckedKeys(defaultCheckedKeys);
-      setPromiseVisible(true);
-    } finally {
-      setLoading(false);
-    }
+    setPromiseId(id);
+    setPromiseOpen(true);
   };
 
   /** 关闭权限 */
   const closePermission = () => {
-    setPromiseVisible(false);
-  };
-
-  /**
-   * 权限提交
-   */
-  const permissionSubmit = async (checked: Key[]) => {
-    try {
-      setLoading(true);
-      const params = {
-        menuIds: checked,
-        userId: promiseId,
-      };
-      const { code, message } = await savePermission(params);
-      if (Number(code) !== 200) return;
-      messageApi.success(message || t('system.authorizationSuccessful'));
-      setPromiseVisible(false);
-    } finally {
-      setLoading(false);
-    }
+    setPromiseOpen(false);
   };
 
   /** 点击新增 */
@@ -265,26 +237,40 @@ function Page() {
    * @param _ - 当前值
    * @param record - 当前行参数
    */
-  function optionRender(_: unknown, record: object) {
-    return (
-      <div className="flex flex-wrap gap-5px">
-        {pagePermission.permission === true && (
-          <Button className="small-btn" onClick={() => openPermission((record as RowData).id)}>
-            {t('system.permissions')}
-          </Button>
-        )}
-        {pagePermission.update === true && (
-          <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
-        )}
-        {pagePermission.delete === true && (
-          <DeleteBtn
-            name={(record as RowData).username}
-            handleDelete={() => onDelete((record as RowData).id)}
-          />
-        )}
-      </div>
-    );
-  }
+  const optionRender = useCallback(
+    (_: unknown, record: object) => {
+      return (
+        <div className="flex flex-wrap gap-5px">
+          {pagePermission.permission === true && (
+            <Button className="small-btn" onClick={() => openPermission((record as RowData).id)}>
+              {t('system.permissions')}
+            </Button>
+          )}
+          {pagePermission.update === true && (
+            <UpdateBtn onClick={() => onUpdate((record as RowData).id)} />
+          )}
+          {pagePermission.delete === true && (
+            <DeleteBtn
+              name={(record as RowData).username}
+              handleDelete={() => onDelete((record as RowData).id)}
+            />
+          )}
+        </div>
+      );
+    },
+    [
+      pagePermission.permission,
+      pagePermission.update,
+      pagePermission.delete,
+      t,
+      openPermission,
+      onUpdate,
+      onDelete,
+    ],
+  );
+
+  // 缓存列配置
+  const columns = useMemo(() => tableColumns(t, optionRender), [t, optionRender]);
 
   /** 左侧渲染 */
   const leftContentRender = (
@@ -302,6 +288,7 @@ function Page() {
       <BaseCard>
         <BaseSearch
           list={searchList(t)}
+          searchForm={searchForm}
           data={searchData}
           type="grid"
           isLoading={isLoading}
@@ -348,13 +335,7 @@ function Page() {
         />
       </BaseModal>
 
-      <PermissionDrawer
-        isVisible={isPromiseVisible}
-        treeData={promiseTreeData}
-        checkedKeys={promiseCheckedKeys}
-        onClose={closePermission}
-        onSubmit={permissionSubmit}
-      />
+      <PermissionDrawer isOpen={isPromiseOpen} id={promiseId} onClose={closePermission} />
     </BaseContent>
   );
 }
