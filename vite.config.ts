@@ -1,3 +1,7 @@
+/**
+ * 学习提示：Vite 主配置文件：连接插件、别名、开发服务器、代理和生产构建配置。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import { defineConfig, loadEnv } from 'vite';
 import { handleEnv } from './build/utils/helper';
 import { createProxy } from './build/vite/proxy';

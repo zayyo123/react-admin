@@ -1,3 +1,7 @@
+/**
+ * 学习提示：全局类型模块：集中声明表单、表格、菜单、接口返回等 TypeScript 类型。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import type {
   InputProps,
   InputNumberProps,

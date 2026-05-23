@@ -1,3 +1,7 @@
+/**
+ * 学习提示：公共组件模块：沉淀页面之间复用的 UI 和交互能力，避免业务页面重复造组件。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import type { ColProps, FormInstance } from 'antd';
 import type { BaseFormData, BaseSearchList } from '#/form';
 import { type CSSProperties, type ReactNode, type Ref, useEffect, useState, useMemo } from 'react';
@@ -34,6 +38,11 @@ interface Props extends FormProps {
   handleFinish: FormProps['onFinish'];
 }
 
+/**
+ * 通用搜索表单组件。
+ * 它和 BaseForm 的思路一致：页面传入 list 配置，组件负责渲染搜索项、提交、重置、
+ * 栅格布局和展开/收起。初学者可以重点观察 list 如何变成 JSX。
+ */
 const BaseSearch = (props: Props) => {
   const {
     ref,
@@ -61,11 +70,12 @@ const BaseSearch = (props: Props) => {
   const [isExpand, setExpand] = useState(false);
   const [isFirst, setFirst] = useState(true);
 
+  // 页面传入 searchForm 时使用外部表单实例，方便 useSearchUrlParams 把 URL 参数回填到搜索框。
   if (searchForm) {
     form = searchForm;
   }
 
-  // 是否展示展开按钮
+  // 是否展示展开按钮：搜索项超过默认展示数量时，才显示“展开/收缩”。
   const isShowExpand = useMemo(() => {
     if (!isRowExpand) return false;
 
@@ -73,7 +83,7 @@ const BaseSearch = (props: Props) => {
     return showNum < list.length;
   }, [defaultColCount, defaultRowExpand, isRowExpand, list.length]);
 
-  // 初始化内容
+  // 初始化搜索内容。只在首次有 data 时回填，避免用户输入过程中被外部状态覆盖。
   useEffect(() => {
     try {
       if (Object.keys(data).length && isFirst) {
@@ -86,7 +96,7 @@ const BaseSearch = (props: Props) => {
     }
   }, [data, form, isFirst]);
 
-  // 清除多余参数
+  // 清除封装组件自己的参数，剩下的原生 FormProps 继续透传给 Antd Form。
   const formProps = { ...props };
   delete formProps.type;
   delete formProps.isSearch;
@@ -96,6 +106,7 @@ const BaseSearch = (props: Props) => {
 
   /** 点击重置 */
   const onReset = () => {
+    // reset 后立即 submit，让页面使用初始条件重新请求列表。
     form?.resetFields();
     form?.setFieldsValue(initialValues ? { ...initialValues } : {});
     form?.submit();
@@ -118,7 +129,7 @@ const BaseSearch = (props: Props) => {
   const filterList = (list: BaseSearchList[]) => {
     if (!isShowExpand) return list;
 
-    // 默认显示个数
+    // 默认显示个数 = 每行列数 * 默认行数，超出的字段根据 isExpand 决定隐藏或展示。
     const showNum = defaultColCount * defaultRowExpand;
 
     for (let i = 0; i < list.length; i++) {
@@ -137,6 +148,7 @@ const BaseSearch = (props: Props) => {
 
   /** 获取表单label宽度 */
   const getLabelCol = (item?: BaseSearchList) => {
+    // 优先使用字段自己的宽度，其次使用组件统一配置，最后根据 grid/移动端给默认值。
     if (item?.labelWidth) {
       return { style: { width: item.labelWidth } };
     }
@@ -149,6 +161,7 @@ const BaseSearch = (props: Props) => {
 
   /** 获取输入间隙 */
   const getWrapperCol = (item?: BaseSearchList) => {
+    // wrapperCol 控制输入控件占位宽度，和 labelCol 配合影响表单对齐。
     if (item?.wrapperWidth) {
       return { style: { width: item.wrapperWidth } };
     }
@@ -165,9 +178,9 @@ const BaseSearch = (props: Props) => {
    */
   const onFinish: FormProps['onFinish'] = (values) => {
     if (handleFinish) {
-      // 将dayjs类型转为字符串
+      // 将 dayjs 类型转为接口常用的字符串/数组格式。
       let params = filterDayjs(values, list as BaseFormList[]);
-      // 过滤空字符串和前后空格
+      // 过滤空字符串和前后空格，避免 URL 和接口参数里出现无意义字段。
       params = filterEmptyStr(params);
       handleFinish?.(params);
     }
@@ -236,6 +249,7 @@ const BaseSearch = (props: Props) => {
         {type === 'default' && (
           <>
             {list?.map((item) => (
+              // default 模式适合字段较少的搜索栏，所有字段按 inline 表单顺序排列。
               <Form.Item
                 {...filterFormItem(item)}
                 key={`${item.name}`}
@@ -254,6 +268,7 @@ const BaseSearch = (props: Props) => {
         {type === 'grid' && (
           <Flex wrap className="w-full">
             {filterList(list)?.map((item) => (
+              // grid 模式按百分比宽度排布，移动端自动一行一个字段。
               <div
                 key={`${item.name}`}
                 style={{ width: item.hidden ? 0 : `${100 / (isPhone ? 1 : defaultColCount)}%` }}

@@ -1,3 +1,7 @@
+/**
+ * 学习提示：表单组件模块：通过配置生成 Ant Design 表单，减少页面重复编写 Form.Item。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import type { TFunction } from 'i18next';
 import type { ComponentType, BaseFormList } from '#/form';
 import { initCompProps } from './helper';

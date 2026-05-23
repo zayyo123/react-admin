@@ -1,3 +1,7 @@
+/**
+ * 学习提示：构建配置模块：维护 Vite 插件、代理、打包、环境变量等工程化能力。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import type { PluginOption } from "vite";
 import fs from "fs";
 import path from "path";

@@ -15,6 +15,10 @@
 
 [React Admin 项目中文讲解](./docs/PROJECT_GUIDE.zh-CN.md)
 
+如果你是 React 初学者，建议先按学习路线阅读：
+
+[React 初学者学习指南](./docs/REACT_BEGINNER_GUIDE.zh-CN.md)
+
 ## 🚀 项目演示
 [演示地址](https://southliu.github.io/)，接口数据都为mock数据，无法进行新增和修改。
 

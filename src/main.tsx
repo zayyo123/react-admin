@@ -1,3 +1,7 @@
+/**
+ * 学习提示：应用入口文件：负责引入全局样式、初始化运行环境，并把 React 应用挂载到浏览器 DOM。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import ReactDOM from 'react-dom/client';
 import Router from './router';
 import '@/assets/css/public.less';

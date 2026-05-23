@@ -1,3 +1,7 @@
+/**
+ * 学习提示：自定义 Hook 模块：把组件中可复用的状态逻辑和浏览器能力封装成 useXxx 函数。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 interface Options {
   ArrowUp?: () => void;
   ArrowDown?: () => void;

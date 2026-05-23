@@ -1,3 +1,7 @@
+/**
+ * 学习提示：内部请求包：基于 axios 封装统一请求实例、拦截器和重复请求取消。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import axios from 'axios';
 import type {
   AxiosResponse,

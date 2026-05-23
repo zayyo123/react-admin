@@ -1,3 +1,7 @@
+/**
+ * 学习提示：内部样式规范包：沉淀 stylelint 配置，统一团队样式检查规则。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 export default {
   extends: ['stylelint-config-standard', 'stylelint-config-recess-order'],
   ignoreFiles: ['**/*.js', '**/*.jsx', '**/*.tsx', '**/*.ts', '**/*.json', '**/*.md'],

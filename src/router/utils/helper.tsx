@@ -1,3 +1,7 @@
+/**
+ * 学习提示：路由模块：负责把页面组件组织成浏览器可访问的路由，并处理登录态守卫。
+ * 作为 React 初学者，可以先看本文件导出的组件/函数名称，再顺着 props、state、useEffect 和事件处理函数理解数据流。
+ */
 import type { RouteObject } from 'react-router-dom';
 import { lazy } from 'react';
 import { ROUTER_EXCLUDE } from './config';
